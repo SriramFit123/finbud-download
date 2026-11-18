@@ -170,6 +170,15 @@ function receiveApk(req) {
   });
 }
 
+function githubErrorDetail(text) {
+  try {
+    const message = JSON.parse(text).message;
+    return typeof message === 'string' ? `: ${message.slice(0, 180)}` : '';
+  } catch {
+    return '';
+  }
+}
+
 async function githubApi(pathname, method = 'GET', payload) {
   const response = await fetch(`https://api.github.com${pathname}`, {
     method,
@@ -184,7 +193,7 @@ async function githubApi(pathname, method = 'GET', payload) {
   });
   const text = await response.text();
   if (!response.ok) {
-    const error = new Error(`GitHub could not complete the release update (HTTP ${response.status}).`);
+    const error = new Error(`GitHub could not complete the release update (HTTP ${response.status}${githubErrorDetail(text)}).`);
     error.statusCode = 502;
     throw error;
   }
@@ -210,7 +219,7 @@ async function uploadReleaseAsset(release, assetName, file) {
   });
   const text = await response.text();
   if (!response.ok) {
-    const error = new Error(`GitHub could not receive the APK (HTTP ${response.status}).`);
+    const error = new Error(`GitHub could not receive the APK (HTTP ${response.status}${githubErrorDetail(text)}).`);
     error.statusCode = 502;
     throw error;
   }
