@@ -219,7 +219,19 @@ async function uploadReleaseAsset(release, assetName, file) {
 
 async function replaceReleaseApk(file) {
   const releasePath = `/repos/${OWNER}/${REPOSITORY}/releases/tags/${RELEASE_TAG}`;
-  const release = await githubApi(releasePath);
+  let release;
+  try {
+    release = await githubApi(releasePath);
+  } catch (error) {
+    if (!error.message.includes("HTTP 404")) throw error;
+    release = await githubApi(`/repos/${OWNER}/${REPOSITORY}/releases`, "POST", {
+      tag_name: RELEASE_TAG,
+      name: `FinBud ${RELEASE_TAG}`,
+      body: "Android installer for FinBud version 1.0.0.",
+      draft: false,
+      prerelease: false,
+    });
+  }
   const oldAsset = (release.assets || []).find((asset) => asset.name === ASSET_NAME);
   const stagingName = `FinBud-original-debug-upload-${crypto.randomBytes(6).toString('hex')}.apk`;
   const uploaded = await uploadReleaseAsset(release, stagingName, file);
