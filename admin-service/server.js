@@ -11,7 +11,8 @@ const Busboy = require('busboy');
 const OWNER = 'SriramFit123';
 const REPOSITORY = 'finbud-download';
 const RELEASE_TAG = 'v1.0.0';
-const ASSET_NAME = 'FinBud-original-debug.apk';
+const ASSET_NAME = 'FinBud.apk';
+const LEGACY_ASSET_NAME = 'FinBud-original-debug.apk';
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'FinBud Admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
@@ -241,7 +242,8 @@ async function replaceReleaseApk(file) {
       prerelease: false,
     });
   }
-  const oldAsset = (release.assets || []).find((asset) => asset.name === ASSET_NAME);
+  const oldAsset = (release.assets || []).find((asset) => asset.name === ASSET_NAME)
+    || (release.assets || []).find((asset) => asset.name === LEGACY_ASSET_NAME);
   const stagingName = `FinBud-original-debug-upload-${crypto.randomBytes(6).toString('hex')}.apk`;
   const uploaded = await uploadReleaseAsset(release, stagingName, file);
   let oldRenamed = false;
@@ -353,5 +355,33 @@ const server = http.createServer(async (req, res) => {
 server.requestTimeout = 20 * 60 * 1000;
 server.headersTimeout = 60 * 1000;
 server.keepAliveTimeout = 5 * 1000;
+async function migrateLegacyReleaseAsset() {
+  if (!GITHUB_TOKEN) return;
+  let release;
+  try {
+    release = await githubApi(`/repos/${OWNER}/${REPOSITORY}/releases/tags/${RELEASE_TAG}`);
+  } catch (error) {
+    console.error(`Could not check the FinBud release asset name: ${error.message}`);
+    return;
+  }
+
+  const assets = release.assets || [];
+  const legacy = assets.find((asset) => asset.name === LEGACY_ASSET_NAME);
+  if (!legacy) return;
+
+  const current = assets.find((asset) => asset.name === ASSET_NAME);
+  try {
+    if (current) {
+      await githubApi(`/repos/${OWNER}/${REPOSITORY}/releases/assets/${legacy.id}`, 'DELETE');
+    } else {
+      await githubApi(`/repos/${OWNER}/${REPOSITORY}/releases/assets/${legacy.id}`, 'PATCH', { name: ASSET_NAME });
+    }
+    console.log('FinBud release asset is now named FinBud.apk');
+  } catch (error) {
+    console.error(`Could not rename the FinBud release asset: ${error.message}`);
+  }
+}
+
 server.listen(PORT, '0.0.0.0', () => console.log(`FinBud APK admin listening on ${PORT}`));
+void migrateLegacyReleaseAsset();
 
