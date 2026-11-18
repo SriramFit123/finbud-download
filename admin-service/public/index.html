@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0e7a63">
+  <title>FinBud Admin — APK Upload</title>
+  <style>
+    :root { color-scheme: light; --green: #0e7a63; --ink: #17332d; --muted: #60736d; --line: #dce9e4; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 32px 18px; background: #f4f8f6; color: var(--ink); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { width: min(100%, 620px); margin: 5vh auto; padding: clamp(24px, 6vw, 44px); background: white; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 16px 50px #17332d0d; }
+    .mark { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 15px; background: var(--green); color: white; font-size: 26px; font-weight: 750; }
+    h1 { margin: 20px 0 4px; font-size: clamp(30px, 7vw, 40px); line-height: 1.1; letter-spacing: -1px; }
+    .muted { color: var(--muted); }
+    .panel { margin-top: 24px; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: #f7faf8; }
+    label { display: block; margin: 12px 0 5px; font-size: 14px; font-weight: 650; }
+    input[type="text"], input[type="password"], input[type="file"] { width: 100%; padding: 12px; border: 1px solid #bdcec7; border-radius: 8px; background: white; color: var(--ink); font: inherit; }
+    input:focus-visible, button:focus-visible { outline: 3px solid #9bcbbb; outline-offset: 2px; }
+    button { width: 100%; margin-top: 16px; padding: 13px 18px; border: 1px solid var(--green); border-radius: 9px; background: var(--green); color: white; font: inherit; font-weight: 700; cursor: pointer; }
+    button:hover { background: #0a5e4d; }
+    button.secondary { border-color: #aebfb8; background: white; color: var(--ink); }
+    button.secondary:hover { background: #edf4f0; }
+    button:disabled { opacity: .65; cursor: wait; }
+    .status { min-height: 24px; margin: 12px 0 0; font-size: 14px; }
+    .status.error { color: #a12b25; }
+    .status.success { color: #176849; }
+    .progress { height: 8px; margin-top: 12px; overflow: hidden; border-radius: 8px; background: #e4ece8; }
+    .progress span { display: block; width: 0; height: 100%; background: var(--green); transition: width .15s ease; }
+    .hidden { display: none; }
+    footer { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; }
+    footer a { color: var(--green); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="mark" aria-hidden="true">F</div>
+    <h1>FinBud Admin</h1>
+    <p class="muted">Upload a new APK. The public download will update automatically.</p>
+
+    <section id="login-panel" class="panel">
+      <form id="login-form">
+        <label for="username">User name</label>
+        <input id="username" name="username" type="text" value="FinBud Admin" autocomplete="username" required>
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <button id="login-button" type="submit">Log in</button>
+      </form>
+      <p id="login-status" class="status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="upload-panel" class="panel hidden">
+      <form id="upload-form">
+        <label for="apk">Choose the new Android APK</label>
+        <input id="apk" name="apk" type="file" accept=".apk,application/vnd.android.package-archive" required>
+        <p class="muted">Select the APK you built. The portal will replace the current download automatically.</p>
+        <button id="upload-button" type="submit">Upload and update download</button>
+        <div id="progress" class="progress hidden" aria-hidden="true"><span id="progress-bar"></span></div>
+      </form>
+      <p id="upload-status" class="status" role="status" aria-live="polite"></p>
+      <button id="logout-button" class="secondary" type="button">Log out</button>
+    </section>
+
+    <footer><a href="https://sriramfit123.github.io/finbud-download/">Back to public FinBud downloads</a></footer>
+  </main>
+  <script>
+    const loginPanel = document.getElementById('login-panel');
+    const uploadPanel = document.getElementById('upload-panel');
+    const loginStatus = document.getElementById('login-status');
+    const uploadStatus = document.getElementById('upload-status');
+    const uploadButton = document.getElementById('upload-button');
+    const progress = document.getElementById('progress');
+    const progressBar = document.getElementById('progress-bar');
+
+    function showAuthenticated(value) {
+      loginPanel.classList.toggle('hidden', value);
+      uploadPanel.classList.toggle('hidden', !value);
+      if (!value) document.getElementById('password').value = '';
+    }
+    function setStatus(element, message, kind = '') {
+      element.textContent = message;
+      element.className = `status ${kind}`;
+    }
+    async function checkSession() {
+      try {
+        const response = await fetch('/api/session', { cache: 'no-store' });
+        const state = await response.json();
+        showAuthenticated(Boolean(state.authenticated));
+      } catch {
+        setStatus(loginStatus, 'Admin service is waking up. Refresh in a moment.', 'error');
+      }
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = document.getElementById('login-button');
+      button.disabled = true;
+      setStatus(loginStatus, 'Signing in…');
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value,
+          }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not sign in.');
+        showAuthenticated(true);
+        setStatus(uploadStatus, 'Signed in. Choose an APK to upload.');
+      } catch (error) {
+        setStatus(loginStatus, error.message, 'error');
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    document.getElementById('upload-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const file = document.getElementById('apk').files[0];
+      if (!file) return setStatus(uploadStatus, 'Choose an APK file first.', 'error');
+      if (!file.name.toLowerCase().endsWith('.apk')) return setStatus(uploadStatus, 'Choose an .apk file.', 'error');
+      uploadButton.disabled = true;
+      progress.classList.remove('hidden');
+      progressBar.style.width = '0%';
+      setStatus(uploadStatus, 'Uploading APK to GitHub…');
+
+      const form = new FormData();
+      form.append('apk', file, file.name);
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload');
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          progressBar.style.width = `${percent}%`;
+          setStatus(uploadStatus, percent < 100 ? `Uploading APK… ${percent}%` : 'APK received. Updating the GitHub download…');
+        }
+      };
+      xhr.onload = () => {
+        let result = {};
+        try { result = JSON.parse(xhr.responseText || '{}'); } catch {}
+        if (xhr.status >= 200 && xhr.status < 300) {
+          progressBar.style.width = '100%';
+          setStatus(uploadStatus, result.cleanupWarning || 'Done. The public download button now serves this APK.', 'success');
+          document.getElementById('apk').value = '';
+        } else if (xhr.status === 401) {
+          showAuthenticated(false);
+          setStatus(loginStatus, 'Please sign in again before uploading.', 'error');
+        } else {
+          setStatus(uploadStatus, result.error || 'Upload failed. Please try again.', 'error');
+        }
+        uploadButton.disabled = false;
+      };
+      xhr.onerror = () => {
+        setStatus(uploadStatus, 'Network error. Check your connection and try again.', 'error');
+        uploadButton.disabled = false;
+      };
+      xhr.send(form);
+    });
+
+    document.getElementById('logout-button').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' }).catch(() => {});
+      showAuthenticated(false);
+      setStatus(loginStatus, 'You are logged out.');
+    });
+
+    checkSession();
+  </script>
+</body>
+</html>
+
