@@ -176,6 +176,7 @@ async function githubApi(pathname, method = 'GET', payload) {
     headers: {
       Accept: 'application/vnd.github+json',
       Authorization: `Bearer ${GITHUB_TOKEN}`,
+      'User-Agent': 'FinBud-APK-Admin',
       'X-GitHub-Api-Version': GITHUB_API_VERSION,
       ...(payload ? { 'Content-Type': 'application/json' } : {}),
     },
@@ -199,8 +200,9 @@ async function uploadReleaseAsset(release, assetName, file) {
     headers: {
       Accept: 'application/vnd.github+json',
       Authorization: `Bearer ${GITHUB_TOKEN}`,
+      'User-Agent': 'FinBud-APK-Admin',
       'X-GitHub-Api-Version': GITHUB_API_VERSION,
-      'Content-Type': 'application/vnd.android.package-archive',
+      'Content-Type': 'application/octet-stream',
       'Content-Length': String(file.size),
     },
     body: fs.createReadStream(file.path),
