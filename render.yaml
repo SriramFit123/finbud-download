@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: finbud-apk-admin-sriramfit123
+    runtime: node
+    plan: free
+    rootDir: admin-service
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: ADMIN_USERNAME
+        value: FinBud Admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: NODE_ENV
+        value: production
+
