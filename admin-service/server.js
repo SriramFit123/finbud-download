@@ -10,9 +10,21 @@ const Busboy = require('busboy');
 
 const OWNER = 'SriramFit123';
 const REPOSITORY = 'finbud-download';
-const RELEASE_TAG = 'v1.0.0';
-const ASSET_NAME = 'FinBud.apk';
-const LEGACY_ASSET_NAME = 'FinBud-original-debug.apk';
+const APP_CONFIG = {
+  finbud: {
+    id: 'finbud',
+    name: 'FinBud',
+    releaseTag: 'v1.0.0',
+    assetName: 'FinBud.apk',
+    legacyAssetName: 'FinBud-original-debug.apk',
+  },
+  supermom: {
+    id: 'supermom',
+    name: 'SuperMom',
+    releaseTag: 'supermom-latest',
+    assetName: 'SuperMom.apk',
+  },
+};
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'FinBud Admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
@@ -104,6 +116,7 @@ function receiveApk(req) {
   return new Promise((resolve, reject) => {
     let fileCount = 0;
     let savedFile = null;
+    let selectedAppId = null;
     let writeTask = Promise.resolve();
     let failure = null;
 
@@ -145,6 +158,13 @@ function receiveApk(req) {
         .catch((error) => { failure = error; });
     });
 
+    parser.on('field', (name, value) => {
+      if (name !== 'appId' || selectedAppId !== null) {
+        failure = Object.assign(new Error('Choose one app to update.'), { statusCode: 400 });
+        return;
+      }
+      selectedAppId = value;
+    });
     parser.on('fieldsLimit', () => { failure = Object.assign(new Error('Unexpected upload fields.'), { statusCode: 400 }); });
     parser.on('filesLimit', () => { failure = Object.assign(new Error('Upload one APK file at a time.'), { statusCode: 400 }); });
     parser.on('partsLimit', () => { failure = Object.assign(new Error('Upload one APK file at a time.'), { statusCode: 400 }); });
@@ -154,6 +174,8 @@ function receiveApk(req) {
         await writeTask;
         if (failure) throw failure;
         if (!savedFile || fileCount !== 1) throw Object.assign(new Error('Choose one APK file to upload.'), { statusCode: 400 });
+        if (!selectedAppId || !Object.hasOwn(APP_CONFIG, selectedAppId)) throw Object.assign(new Error('Choose an app to update.'), { statusCode: 400 });
+        savedFile.appId = selectedAppId;
         if (!savedFile.originalName.toLowerCase().endsWith('.apk')) throw Object.assign(new Error('Choose an .apk file.'), { statusCode: 400 });
         if (savedFile.size < 8) throw Object.assign(new Error('The selected file is empty or incomplete.'), { statusCode: 400 });
         const handle = await fsp.open(savedFile.path, 'r');
@@ -227,51 +249,55 @@ async function uploadReleaseAsset(release, assetName, file) {
   return JSON.parse(text);
 }
 
-async function replaceReleaseApk(file) {
-  const releasePath = `/repos/${OWNER}/${REPOSITORY}/releases/tags/${RELEASE_TAG}`;
+async function replaceReleaseApk(file, app) {
+  const releasePath = '/repos/' + OWNER + '/' + REPOSITORY + '/releases/tags/' + app.releaseTag;
   let release;
   try {
     release = await githubApi(releasePath);
   } catch (error) {
-    if (!error.message.includes("HTTP 404")) throw error;
-    release = await githubApi(`/repos/${OWNER}/${REPOSITORY}/releases`, "POST", {
-      tag_name: RELEASE_TAG,
-      name: `FinBud ${RELEASE_TAG}`,
-      body: "Android installer for FinBud version 1.0.0.",
+    if (!error.message.includes('HTTP 404')) throw error;
+    release = await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases', 'POST', {
+      tag_name: app.releaseTag,
+      name: app.name + ' download',
+      body: 'Android installer for ' + app.name + '.',
       draft: false,
       prerelease: false,
     });
   }
-  const oldAsset = (release.assets || []).find((asset) => asset.name === ASSET_NAME)
-    || (release.assets || []).find((asset) => asset.name === LEGACY_ASSET_NAME);
-  const stagingName = `FinBud-original-debug-upload-${crypto.randomBytes(6).toString('hex')}.apk`;
+
+  const assets = release.assets || [];
+  const oldAsset = assets.find((asset) => asset.name === app.assetName)
+    || (app.legacyAssetName && assets.find((asset) => asset.name === app.legacyAssetName));
+  const stagingName = app.id + '-upload-' + crypto.randomBytes(6).toString('hex') + '.apk';
   const uploaded = await uploadReleaseAsset(release, stagingName, file);
   let oldRenamed = false;
   let newRenamed = false;
-  const backupName = `FinBud-original-debug-backup-${crypto.randomBytes(6).toString('hex')}.apk`;
+  const backupName = app.id + '-backup-' + crypto.randomBytes(6).toString('hex') + '.apk';
 
   try {
     if (oldAsset) {
-      await githubApi(`/repos/${OWNER}/${REPOSITORY}/releases/assets/${oldAsset.id}`, 'PATCH', { name: backupName });
+      await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases/assets/' + oldAsset.id, 'PATCH', { name: backupName });
       oldRenamed = true;
     }
-    await githubApi(`/repos/${OWNER}/${REPOSITORY}/releases/assets/${uploaded.id}`, 'PATCH', { name: ASSET_NAME });
+    await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases/assets/' + uploaded.id, 'PATCH', { name: app.assetName });
     newRenamed = true;
   } catch (error) {
-    if (oldRenamed) await githubApi(`/repos/${OWNER}/${REPOSITORY}/releases/assets/${oldAsset.id}`, 'PATCH', { name: ASSET_NAME }).catch(() => {});
-    if (!newRenamed) await githubApi(`/repos/${OWNER}/${REPOSITORY}/releases/assets/${uploaded.id}`, 'DELETE').catch(() => {});
+    if (oldRenamed) await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases/assets/' + oldAsset.id, 'PATCH', { name: app.assetName }).catch(() => {});
+    if (!newRenamed) await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases/assets/' + uploaded.id, 'DELETE').catch(() => {});
     throw error;
   }
 
   let cleanupWarning = null;
   if (oldRenamed) {
-    try { await githubApi(`/repos/${OWNER}/${REPOSITORY}/releases/assets/${oldAsset.id}`, 'DELETE'); }
+    try { await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases/assets/' + oldAsset.id, 'DELETE'); }
     catch { cleanupWarning = 'The new APK is live, but GitHub kept a backup asset in the release.'; }
   }
   return {
-    name: ASSET_NAME,
+    appId: app.id,
+    appName: app.name,
+    name: app.assetName,
     size: file.size,
-    downloadUrl: `https://github.com/${OWNER}/${REPOSITORY}/releases/download/${RELEASE_TAG}/${ASSET_NAME}`,
+    downloadUrl: 'https://github.com/' + OWNER + '/' + REPOSITORY + '/releases/download/' + app.releaseTag + '/' + app.assetName,
     cleanupWarning,
   };
 }
@@ -293,24 +319,37 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   try {
     if (req.method === 'GET' && url.pathname === '/health') return json(res, 200, { ok: true });
-    if (req.method === 'GET' && url.pathname === '/api/release') {
+    if (req.method === 'GET' && (url.pathname === '/api/apps' || url.pathname === '/api/release')) {
       const origin = req.headers.origin;
       if (origin === 'https://sriramfit123.github.io') {
         res.setHeader('Access-Control-Allow-Origin', origin);
         res.setHeader('Vary', 'Origin');
       }
-      if (!GITHUB_TOKEN) return json(res, 503, { available: false });
+      const singleAppRequest = url.pathname === '/api/release';
+      if (!GITHUB_TOKEN) return json(res, 503, singleAppRequest ? { available: false } : { apps: [] });
       try {
-        const release = await githubApi(`/repos/${OWNER}/${REPOSITORY}/releases/tags/${RELEASE_TAG}`);
-        const asset = (release.assets || []).find((item) => item.name === ASSET_NAME);
-        if (!asset) return json(res, 404, { available: false });
-        return json(res, 200, {
-          available: true,
-          size: asset.size,
-          downloadUrl: asset.browser_download_url,
-        });
+        const selectedApps = singleAppRequest ? [APP_CONFIG.finbud] : Object.values(APP_CONFIG);
+        const apps = await Promise.all(selectedApps.map(async (app) => {
+          let release;
+          try {
+            release = await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases/tags/' + app.releaseTag);
+          } catch (error) {
+            if (error.message.includes('HTTP 404')) return { id: app.id, name: app.name, available: false };
+            throw error;
+          }
+          const asset = (release.assets || []).find((item) => item.name === app.assetName);
+          if (!asset) return { id: app.id, name: app.name, available: false };
+          return {
+            id: app.id,
+            name: app.name,
+            available: true,
+            size: asset.size,
+            downloadUrl: asset.browser_download_url,
+          };
+        }));
+        return singleAppRequest ? json(res, 200, apps[0]) : json(res, 200, { apps });
       } catch {
-        return json(res, 503, { available: false });
+        return json(res, 503, singleAppRequest ? { available: false } : { apps: [] });
       }
     }
     if (req.method === 'GET' && url.pathname === '/') return await serveFile(res, path.join(__dirname, 'public', 'index.html'), 'text/html; charset=utf-8');
@@ -355,7 +394,9 @@ const server = http.createServer(async (req, res) => {
       let file = null;
       try {
         file = await receiveApk(req);
-        const result = await replaceReleaseApk(file);
+        const app = APP_CONFIG[file.appId];
+        if (!app) throw Object.assign(new Error('Choose an app to update.'), { statusCode: 400 });
+        const result = await replaceReleaseApk(file, app);
         return json(res, 200, { ok: true, ...result });
       } catch (error) {
         return json(res, error.statusCode || 500, { error: error.message || 'Upload failed. Please try again.' });
@@ -377,28 +418,29 @@ server.headersTimeout = 60 * 1000;
 server.keepAliveTimeout = 5 * 1000;
 async function migrateLegacyReleaseAsset() {
   if (!GITHUB_TOKEN) return;
+  const app = APP_CONFIG.finbud;
   let release;
   try {
-    release = await githubApi(`/repos/${OWNER}/${REPOSITORY}/releases/tags/${RELEASE_TAG}`);
+    release = await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases/tags/' + app.releaseTag);
   } catch (error) {
-    console.error(`Could not check the FinBud release asset name: ${error.message}`);
+    console.error('Could not check the FinBud release asset name: ' + error.message);
     return;
   }
 
   const assets = release.assets || [];
-  const legacy = assets.find((asset) => asset.name === LEGACY_ASSET_NAME);
+  const legacy = assets.find((asset) => asset.name === app.legacyAssetName);
   if (!legacy) return;
 
-  const current = assets.find((asset) => asset.name === ASSET_NAME);
+  const current = assets.find((asset) => asset.name === app.assetName);
   try {
     if (current) {
-      await githubApi(`/repos/${OWNER}/${REPOSITORY}/releases/assets/${legacy.id}`, 'DELETE');
+      await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases/assets/' + legacy.id, 'DELETE');
     } else {
-      await githubApi(`/repos/${OWNER}/${REPOSITORY}/releases/assets/${legacy.id}`, 'PATCH', { name: ASSET_NAME });
+      await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases/assets/' + legacy.id, 'PATCH', { name: app.assetName });
     }
     console.log('FinBud release asset is now named FinBud.apk');
   } catch (error) {
-    console.error(`Could not rename the FinBud release asset: ${error.message}`);
+    console.error('Could not rename the FinBud release asset: ' + error.message);
   }
 }
 
