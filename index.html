@@ -81,6 +81,7 @@
       box-shadow: 0 8px 28px rgba(29,45,75,.045);
     }
     .app-card-top { display: flex; align-items: center; gap: 16px; min-height: 68px; }
+    .generic-icon { color: white; font-size: 32px; font-weight: 800; }
     .app-icon {
       display: grid;
       width: 68px;
@@ -191,7 +192,7 @@
       <p class="intro-copy">Explore the apps that are ready to use and the ones we’re still building.</p>
     </section>
 
-    <section class="app-grid" aria-label="Apps">
+    <section class="app-grid" id="app-grid" aria-label="Apps">
       <article class="app-card" aria-labelledby="finbud-title">
         <div class="app-card-top">
           <div class="app-icon finbud-icon" aria-hidden="true">F</div>
@@ -254,7 +255,78 @@
       return size.toFixed(unit === 0 ? 0 : 1) + ' ' + units[unit];
     }
 
+    function createGenericAppCard(app) {
+      const card = document.createElement('article');
+      card.className = 'app-card';
+      card.id = 'app-card-' + app.id;
+      const titleId = 'title-' + app.id;
+      card.setAttribute('aria-labelledby', titleId);
+
+      const top = document.createElement('div');
+      top.className = 'app-card-top';
+      const icon = document.createElement('div');
+      icon.className = 'app-icon generic-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      const colors = ['#5266a7', '#8a5cad', '#c27045', '#328073', '#567fba', '#af5264'];
+      let colorHash = 0;
+      for (const character of app.id) colorHash = (colorHash * 31 + character.charCodeAt(0)) >>> 0;
+      icon.style.backgroundColor = colors[colorHash % colors.length];
+      icon.textContent = Array.from(app.name.trim())[0]?.toUpperCase() || 'A';
+
+      const heading = document.createElement('div');
+      heading.className = 'app-heading';
+      const titleRow = document.createElement('div');
+      titleRow.className = 'title-row';
+      const title = document.createElement('h2');
+      title.id = titleId;
+      title.textContent = app.name;
+      const status = document.createElement('span');
+      status.className = app.available ? 'status status-available' : 'status status-development';
+      status.textContent = app.available ? 'Available' : 'Under development';
+      titleRow.append(title, status);
+      const category = document.createElement('p');
+      category.className = 'category';
+      category.textContent = app.available ? 'Android' : 'Coming soon';
+      heading.append(titleRow, category);
+      top.append(icon, heading);
+
+      const description = document.createElement('p');
+      description.className = 'description';
+      description.textContent = app.available
+        ? app.name + ' is ready to download.'
+        : app.name + ' is being built now. Its download will appear here when it’s ready.';
+      card.append(top, description);
+
+      if (app.available && Number.isFinite(app.size) && app.downloadUrl) {
+        const actions = document.createElement('div');
+        const button = document.createElement('a');
+        button.className = 'download-button';
+        button.href = app.downloadUrl;
+        button.textContent = 'Download ' + app.name + ' APK · ' + formatFileSize(app.size);
+        const details = document.createElement('p');
+        details.className = 'download-details';
+        details.textContent = 'Android APK';
+        actions.append(button, details);
+        card.append(actions);
+      } else {
+        const note = document.createElement('div');
+        note.className = 'development-note';
+        const dot = document.createElement('span');
+        dot.className = 'development-dot';
+        dot.setAttribute('aria-hidden', 'true');
+        note.append(dot, document.createTextNode('Download not available yet'));
+        card.append(note);
+      }
+
+      document.getElementById('app-grid').append(card);
+    }
+
     function updateAppCard(app) {
+      if (app.id !== 'finbud' && app.id !== 'supermom') {
+        createGenericAppCard(app);
+        return;
+      }
+
       const button = document.getElementById(app.id + '-download');
       const status = document.getElementById(app.id + '-status');
       if (!button || !status) return;
