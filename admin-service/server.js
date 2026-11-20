@@ -25,6 +25,7 @@ const APP_CONFIG = {
     assetName: 'SuperMom.apk',
   },
 };
+const CUSTOM_APP_TAG_PREFIX = 'catalog-app-';
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'FinBud Admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
@@ -174,7 +175,11 @@ function receiveApk(req) {
         await writeTask;
         if (failure) throw failure;
         if (!savedFile || fileCount !== 1) throw Object.assign(new Error('Choose one APK file to upload.'), { statusCode: 400 });
-        if (!selectedAppId || !Object.hasOwn(APP_CONFIG, selectedAppId)) throw Object.assign(new Error('Choose an app to update.'), { statusCode: 400 });
+        const isStaticApp = selectedAppId && Object.hasOwn(APP_CONFIG, selectedAppId);
+        const isCatalogApp = typeof selectedAppId === 'string'
+          && selectedAppId.startsWith(CUSTOM_APP_TAG_PREFIX)
+          && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(selectedAppId.slice(CUSTOM_APP_TAG_PREFIX.length));
+        if (!isStaticApp && !isCatalogApp) throw Object.assign(new Error('Choose an app to update.'), { statusCode: 400 });
         savedFile.appId = selectedAppId;
         if (!savedFile.originalName.toLowerCase().endsWith('.apk')) throw Object.assign(new Error('Choose an .apk file.'), { statusCode: 400 });
         if (savedFile.size < 8) throw Object.assign(new Error('The selected file is empty or incomplete.'), { statusCode: 400 });
@@ -249,6 +254,38 @@ async function uploadReleaseAsset(release, assetName, file) {
   return JSON.parse(text);
 }
 
+async function getCatalogEntries() {
+  const releases = await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases?per_page=100');
+  const releasesByTag = new Map(releases.map((release) => [release.tag_name, release]));
+  const apps = Object.values(APP_CONFIG).slice();
+
+  for (const release of releases) {
+    if (!release.tag_name || !release.tag_name.startsWith(CUSTOM_APP_TAG_PREFIX)) continue;
+    const slug = release.tag_name.slice(CUSTOM_APP_TAG_PREFIX.length);
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) continue;
+    apps.push({
+      id: release.tag_name,
+      name: release.name || slug.replace(/-/g, ' '),
+      releaseTag: release.tag_name,
+      assetName: slug + '.apk',
+    });
+  }
+
+  return apps.map((app) => {
+    const release = releasesByTag.get(app.releaseTag);
+    const asset = release && (release.assets || []).find((item) => item.name === app.assetName);
+    return {
+      app,
+      info: {
+        id: app.id,
+        name: app.name,
+        available: Boolean(asset),
+        ...(asset ? { size: asset.size, downloadUrl: asset.browser_download_url } : {}),
+      },
+    };
+  });
+}
+
 async function replaceReleaseApk(file, app) {
   const releasePath = '/repos/' + OWNER + '/' + REPOSITORY + '/releases/tags/' + app.releaseTag;
   let release;
@@ -258,7 +295,7 @@ async function replaceReleaseApk(file, app) {
     if (!error.message.includes('HTTP 404')) throw error;
     release = await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases', 'POST', {
       tag_name: app.releaseTag,
-      name: app.name + ' download',
+      name: app.name,
       body: 'Android installer for ' + app.name + '.',
       draft: false,
       prerelease: false,
@@ -328,26 +365,12 @@ const server = http.createServer(async (req, res) => {
       const singleAppRequest = url.pathname === '/api/release';
       if (!GITHUB_TOKEN) return json(res, 503, singleAppRequest ? { available: false } : { apps: [] });
       try {
-        const selectedApps = singleAppRequest ? [APP_CONFIG.finbud] : Object.values(APP_CONFIG);
-        const apps = await Promise.all(selectedApps.map(async (app) => {
-          let release;
-          try {
-            release = await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases/tags/' + app.releaseTag);
-          } catch (error) {
-            if (error.message.includes('HTTP 404')) return { id: app.id, name: app.name, available: false };
-            throw error;
-          }
-          const asset = (release.assets || []).find((item) => item.name === app.assetName);
-          if (!asset) return { id: app.id, name: app.name, available: false };
-          return {
-            id: app.id,
-            name: app.name,
-            available: true,
-            size: asset.size,
-            downloadUrl: asset.browser_download_url,
-          };
-        }));
-        return singleAppRequest ? json(res, 200, apps[0]) : json(res, 200, { apps });
+        const entries = await getCatalogEntries();
+        if (singleAppRequest) {
+          const finbud = entries.find((entry) => entry.app.id === 'finbud');
+          return json(res, 200, finbud?.info || { available: false });
+        }
+        return json(res, 200, { apps: entries.map((entry) => entry.info) });
       } catch {
         return json(res, 503, singleAppRequest ? { available: false } : { apps: [] });
       }
@@ -385,6 +408,41 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { authenticated: false });
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/apps') {
+      if (!isSameOrigin(req)) return json(res, 403, { error: 'App creation request rejected.' });
+      if (!currentSession(req)) return json(res, 401, { error: 'Sign in again before adding an app.' });
+      let body;
+      try { body = await requestBody(req, 2048); }
+      catch (error) { return json(res, error.statusCode || 400, { error: error.message }); }
+
+      const name = typeof body.name === 'string' ? body.name.trim().replace(/\s+/g, ' ') : '';
+      if (name.length < 2 || name.length > 48) return json(res, 400, { error: 'App name must be between 2 and 48 characters.' });
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48).replace(/-+$/g, '');
+      if (!slug) return json(res, 400, { error: 'Use an app name with English letters or numbers so its download link can be created.' });
+
+      try {
+        const entries = await getCatalogEntries();
+        if (entries.some((entry) => entry.app.name.toLowerCase() === name.toLowerCase())) {
+          return json(res, 409, { error: 'An app with that name is already in the library.' });
+        }
+        const releaseTag = CUSTOM_APP_TAG_PREFIX + slug;
+        if (entries.some((entry) => entry.app.releaseTag === releaseTag)) {
+          return json(res, 409, { error: 'An app with a similar name already exists. Choose a different name.' });
+        }
+
+        const release = await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases', 'POST', {
+          tag_name: releaseTag,
+          name,
+          body: 'App Library entry for ' + name + '.',
+          draft: false,
+          prerelease: false,
+        });
+        return json(res, 201, { id: releaseTag, name: release.name || name, available: false });
+      } catch (error) {
+        return json(res, error.statusCode || 502, { error: error.message || 'Could not add the app. Please try again.' });
+      }
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/upload') {
       if (!isSameOrigin(req)) return json(res, 403, { error: 'Upload request rejected.' });
       if (!currentSession(req)) return json(res, 401, { error: 'Sign in again before uploading.' });
@@ -394,9 +452,10 @@ const server = http.createServer(async (req, res) => {
       let file = null;
       try {
         file = await receiveApk(req);
-        const app = APP_CONFIG[file.appId];
-        if (!app) throw Object.assign(new Error('Choose an app to update.'), { statusCode: 400 });
-        const result = await replaceReleaseApk(file, app);
+        const entries = await getCatalogEntries();
+        const selected = entries.find((entry) => entry.app.id === file.appId);
+        if (!selected) throw Object.assign(new Error('The selected app is no longer in the library. Refresh the page and try again.'), { statusCode: 400 });
+        const result = await replaceReleaseApk(file, selected.app);
         return json(res, 200, { ok: true, ...result });
       } catch (error) {
         return json(res, error.statusCode || 500, { error: error.message || 'Upload failed. Please try again.' });
