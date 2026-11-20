@@ -293,6 +293,26 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   try {
     if (req.method === 'GET' && url.pathname === '/health') return json(res, 200, { ok: true });
+    if (req.method === 'GET' && url.pathname === '/api/release') {
+      const origin = req.headers.origin;
+      if (origin === 'https://sriramfit123.github.io') {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Vary', 'Origin');
+      }
+      if (!GITHUB_TOKEN) return json(res, 503, { available: false });
+      try {
+        const release = await githubApi(`/repos/${OWNER}/${REPOSITORY}/releases/tags/${RELEASE_TAG}`);
+        const asset = (release.assets || []).find((item) => item.name === ASSET_NAME);
+        if (!asset) return json(res, 404, { available: false });
+        return json(res, 200, {
+          available: true,
+          size: asset.size,
+          downloadUrl: asset.browser_download_url,
+        });
+      } catch {
+        return json(res, 503, { available: false });
+      }
+    }
     if (req.method === 'GET' && url.pathname === '/') return await serveFile(res, path.join(__dirname, 'public', 'index.html'), 'text/html; charset=utf-8');
     if (req.method === 'GET' && url.pathname === '/api/session') return json(res, 200, { authenticated: Boolean(currentSession(req)) });
 
