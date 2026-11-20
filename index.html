@@ -3,60 +3,242 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0e7a63">
-  <title>FinBud — Download</title>
+  <meta name="theme-color" content="#f6f8fc">
+  <title>App Library — FinBud and SuperMom</title>
   <style>
-    :root { color-scheme: light; --green: #0e7a63; --ink: #17332d; --muted: #60736d; --line: #dce9e4; }
+    :root {
+      color-scheme: light;
+      --ink: #19243a;
+      --muted: #67738a;
+      --line: #e6eaf1;
+      --green: #0e7a63;
+      --green-dark: #0a5e4d;
+      --surface: #ffffff;
+      --background: #f6f8fc;
+      --pink: #d64c78;
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 32px 18px; background: #f4f8f6; color: var(--ink); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
-    main { width: min(100%, 650px); margin: 5vh auto; padding: clamp(24px, 6vw, 48px); background: white; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 16px 50px #17332d0d; }
-    .mark { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 15px; background: var(--green); color: white; font-size: 26px; font-weight: 750; }
-    h1 { margin: 20px 0 4px; font-size: clamp(32px, 7vw, 44px); line-height: 1.1; letter-spacing: -1.5px; }
-    .tagline { margin: 0; color: var(--muted); font-size: 18px; }
-    .release { display: flex; gap: 12px; align-items: flex-start; margin: 28px 0; padding: 16px; border: 1px solid #b8d9c9; border-radius: 12px; background: #f0f8f4; color: #245746; }
-    .release strong { display: block; }
-    .release p { margin: 3px 0 0; font-size: 14px; }
-    .button { display: block; width: 100%; padding: 15px 20px; border: 1px solid var(--green); border-radius: 10px; background: var(--green); color: white; font: inherit; font-weight: 700; text-align: center; text-decoration: none; cursor: pointer; transition: background .15s ease; }
-    .button:hover { background: #0a5e4d; }
-    .button:focus-visible { outline: 3px solid #9bcbbb; outline-offset: 3px; }
-    h2 { margin: 30px 0 8px; font-size: 18px; }
-    ol { margin: 8px 0 0; padding-left: 22px; color: #425650; }
-    li { padding: 4px 0; }
-    footer { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
-    footer p { margin: 4px 0; }
-    footer a { color: inherit; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--background);
+      color: var(--ink);
+      font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    .site-header {
+      height: 72px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.9);
+    }
+    .header-inner {
+      width: min(100% - 40px, 1040px);
+      height: 100%;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 11px;
+      color: var(--ink);
+      font-size: 18px;
+      font-weight: 750;
+      text-decoration: none;
+    }
+    .brand-mark {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      border-radius: 11px;
+      background: #e8eef9;
+      color: #334d7b;
+      font-size: 17px;
+      font-weight: 800;
+    }
+    .header-note { color: var(--muted); font-size: 13px; }
+    main { width: min(100% - 40px, 1040px); margin: 0 auto; }
+    .intro { padding: 52px 0 28px; }
+    .eyebrow {
+      margin: 0 0 8px;
+      color: #526991;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1 { margin: 0; font-size: clamp(30px, 5vw, 42px); line-height: 1.16; letter-spacing: -1.2px; }
+    .intro-copy { max-width: 600px; margin: 12px 0 0; color: var(--muted); font-size: 17px; }
+    .app-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .app-card {
+      min-width: 0;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+      box-shadow: 0 8px 28px rgba(29,45,75,.045);
+    }
+    .app-card-top { display: flex; align-items: center; gap: 16px; min-height: 68px; }
+    .app-icon {
+      display: grid;
+      width: 68px;
+      height: 68px;
+      flex: 0 0 68px;
+      place-items: center;
+      overflow: hidden;
+      border-radius: 19px;
+      box-shadow: inset 0 0 0 1px rgba(20,30,50,.06);
+    }
+    .finbud-icon { background: var(--green); color: white; font-size: 38px; font-weight: 800; }
+    .supermom-icon { background: #fce8ef; }
+    .app-heading { min-width: 0; flex: 1; }
+    .title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+    h2 { margin: 0; font-size: 22px; line-height: 1.2; letter-spacing: -.4px; }
+    .category { margin: 5px 0 0; color: var(--muted); font-size: 14px; }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+    .status-available { background: #e8f5ef; color: #176b52; }
+    .status-development { background: #fff3df; color: #8d5a11; }
+    .description { min-height: 50px; margin: 21px 0; color: #46536b; }
+    .download-button {
+      display: flex;
+      width: 100%;
+      min-height: 52px;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 16px;
+      border: 1px solid var(--green);
+      border-radius: 11px;
+      background: var(--green);
+      color: #fff;
+      font-weight: 750;
+      text-align: center;
+      text-decoration: none;
+      transition: background .15s ease, transform .15s ease;
+    }
+    .download-button:hover { background: var(--green-dark); transform: translateY(-1px); }
+    .download-button:focus-visible { outline: 3px solid #a9d7c7; outline-offset: 3px; }
+    .download-details { margin: 9px 0 0; color: var(--muted); font-size: 13px; text-align: center; }
+    .development-note {
+      display: flex;
+      min-height: 52px;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 15px;
+      border: 1px solid #f1dfb8;
+      border-radius: 11px;
+      background: #fffaf0;
+      color: #79521b;
+      font-weight: 700;
+    }
+    .development-dot { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 50%; background: #d69b3d; }
+    .site-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 34px 0 28px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .site-footer a { color: #526991; text-decoration: none; }
+    .site-footer a:hover { text-decoration: underline; }
+    @media (max-width: 700px) {
+      .site-header { height: 64px; }
+      .header-inner, main { width: min(100% - 28px, 520px); }
+      .intro { padding: 38px 0 22px; }
+      .app-grid { grid-template-columns: 1fr; gap: 14px; }
+      .app-card { padding: 20px; }
+      .description { min-height: 0; margin: 18px 0; }
+      .site-footer { margin-top: 26px; }
+    }
+    @media (max-width: 380px) {
+      .header-note { font-size: 12px; }
+      .app-icon { width: 60px; height: 60px; flex-basis: 60px; border-radius: 17px; }
+      .finbud-icon { font-size: 34px; }
+      .app-card-top { gap: 13px; }
+      h2 { font-size: 20px; }
+    }
   </style>
 </head>
 <body>
-  <main>
-    <div class="mark" aria-hidden="true">F</div>
-    <h1>FinBud</h1>
-    <p class="tagline">A private household ledger for two earners.</p>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="./" aria-label="App Library home">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <span>App Library</span>
+      </a>
+      <span class="header-note">Discover and download</span>
+    </div>
+  </header>
 
-    <section class="release" aria-live="polite">
-      <span aria-hidden="true">●</span>
-      <div>
-        <strong>Signed Android release available</strong>
-        <p>FinBud version 1.0.0 is ready to download.</p>
-      </div>
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <p class="eyebrow">Our apps</p>
+      <h1 id="page-title">Apps for everyday life</h1>
+      <p class="intro-copy">Explore the apps that are ready to use and the ones we’re still building.</p>
     </section>
 
-    <a class="button" id="download-apk" href="https://github.com/SriramFit123/finbud-download/releases/download/v1.0.0/FinBud.apk">Download FinBud APK</a>
+    <section class="app-grid" aria-label="Apps">
+      <article class="app-card" aria-labelledby="finbud-title">
+        <div class="app-card-top">
+          <div class="app-icon finbud-icon" aria-hidden="true">F</div>
+          <div class="app-heading">
+            <div class="title-row">
+              <h2 id="finbud-title">FinBud</h2>
+              <span class="status status-available">Available</span>
+            </div>
+            <p class="category">Finance</p>
+          </div>
+        </div>
+        <p class="description">A private household ledger for two earners.</p>
+        <div>
+          <a class="download-button" id="download-apk" href="https://github.com/SriramFit123/finbud-download/releases/download/v1.0.0/FinBud.apk">Download FinBud APK</a>
+          <p class="download-details">Android · Requires Android 7.0 (API 24) or newer.</p>
+        </div>
+      </article>
 
-    <h2>Installing FinBud on Android</h2>
-    <ol>
-      <li>Download the APK file to your Android phone.</li>
-      <li>Open the downloaded file and review Android’s installation prompt.</li>
-      <li>If needed, allow your browser to install apps from this source in Settings.</li>
-      <li>Tap Install, then open FinBud and sign in.</li>
-    </ol>
+      <article class="app-card" aria-labelledby="supermom-title">
+        <div class="app-card-top">
+          <div class="app-icon supermom-icon" aria-hidden="true">
+            <svg viewBox="0 0 64 64" width="64" height="64" focusable="false">
+              <circle cx="26" cy="22" r="8" fill="#bd3e68"/>
+              <path d="M11 51c2-10 7-16 15-16s13 6 15 16" fill="#bd3e68"/>
+              <circle cx="44" cy="29" r="6" fill="#e58ba7"/>
+              <path d="M35 51c1-7 4-11 9-11s8 4 9 11" fill="#e58ba7"/>
+              <path d="M31 32c-2-2-5-1-5 2 0 3 6 7 6 7s6-4 6-7c0-3-3-4-5-2l-1 1z" fill="#fff"/>
+            </svg>
+          </div>
+          <div class="app-heading">
+            <div class="title-row">
+              <h2 id="supermom-title">SuperMom</h2>
+              <span class="status status-development">Under development</span>
+            </div>
+            <p class="category">Coming soon</p>
+          </div>
+        </div>
+        <p class="description">SuperMom is being built now. Its download will appear here when it’s ready.</p>
+        <div class="development-note"><span class="development-dot" aria-hidden="true"></span>Download not available yet</div>
+      </article>
+    </section>
 
-    <footer>
-      <p>Version 1.0.0</p>
-      <p>Requires Android 7.0 (API 24) or newer.</p>
-      <p><a href="https://finbud-apk-admin-sriramfit123.onrender.com/">Admin</a></p>
+    <footer class="site-footer">
+      <span>More apps will appear here as they’re ready.</span>
+      <a href="https://finbud-apk-admin-sriramfit123.onrender.com/">Admin</a>
     </footer>
   </main>
+
   <script>
     const downloadButton = document.getElementById('download-apk');
 
@@ -68,7 +250,7 @@
         size /= 1024;
         unit += 1;
       }
-      return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+      return size.toFixed(unit === 0 ? 0 : 1) + ' ' + units[unit];
     }
 
     fetch('https://finbud-apk-admin-sriramfit123.onrender.com/api/release', { cache: 'no-store' })
@@ -76,7 +258,7 @@
       .then((release) => {
         if (!release?.available || !Number.isFinite(release.size) || !release.downloadUrl) return;
         downloadButton.href = release.downloadUrl;
-        downloadButton.textContent = `Download FinBud APK · ${formatFileSize(release.size)}`;
+        downloadButton.textContent = 'Download FinBud APK · ' + formatFileSize(release.size);
       })
       .catch(() => {});
   </script>
