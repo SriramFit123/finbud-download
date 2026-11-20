@@ -51,16 +51,25 @@
 
     <section id="upload-panel" class="panel hidden">
       <form id="upload-form">
-        <label for="app-id">Select app to update</label>
+        <label for="app-id">Select app</label>
         <select id="app-id" name="appId" required>
           <option value="finbud">FinBud</option>
-          <option value="supermom">SuperMom</option>
+          <option value="supermom">SuperMom · Under development</option>
+          <option value="__new__">Add a new app…</option>
         </select>
-        <label for="apk">Choose the Android APK file</label>
-        <input id="apk" name="apk" type="file" accept=".apk,application/vnd.android.package-archive" required>
-        <p class="muted">The APK will replace the download for the selected app.</p>
-        <button id="upload-button" type="submit">Upload and update selected app</button>
-        <div id="progress" class="progress hidden" aria-hidden="true"><span id="progress-bar"></span></div>
+        <div id="upload-fields">
+          <label for="apk">Choose the Android APK file</label>
+          <input id="apk" name="apk" type="file" accept=".apk,application/vnd.android.package-archive" required>
+          <p class="muted">The APK will replace the download for the selected app.</p>
+          <button id="upload-button" type="submit">Upload and update selected app</button>
+          <div id="progress" class="progress hidden" aria-hidden="true"><span id="progress-bar"></span></div>
+        </div>
+        <div id="new-app-fields" class="hidden">
+          <label for="new-app-name">New app name</label>
+          <input id="new-app-name" type="text" maxlength="48" autocomplete="off" placeholder="For example, Family Planner">
+          <p class="muted">This adds an app card marked Under development. You can upload its APK later.</p>
+          <button id="add-app-button" type="button">Add app to library</button>
+        </div>
       </form>
       <p id="upload-status" class="status" role="status" aria-live="polite"></p>
       <button id="logout-button" class="secondary" type="button">Log out</button>
@@ -76,6 +85,11 @@
     const uploadButton = document.getElementById('upload-button');
     const progress = document.getElementById('progress');
     const progressBar = document.getElementById('progress-bar');
+    const appSelect = document.getElementById('app-id');
+    const uploadFields = document.getElementById('upload-fields');
+    const newAppFields = document.getElementById('new-app-fields');
+    const newAppName = document.getElementById('new-app-name');
+    const addAppButton = document.getElementById('add-app-button');
 
     function showAuthenticated(value) {
       loginPanel.classList.toggle('hidden', value);
@@ -86,6 +100,36 @@
       element.textContent = message;
       element.className = `status ${kind}`;
     }
+    function updateAppSelection() {
+      const addingApp = appSelect.value === '__new__';
+      uploadFields.classList.toggle('hidden', addingApp);
+      newAppFields.classList.toggle('hidden', !addingApp);
+      if (addingApp) {
+        setStatus(uploadStatus, 'Enter the new app name, then add it to the library.');
+      }
+    }
+    async function loadApps(selectedId) {
+      try {
+        const response = await fetch('/api/apps', { cache: 'no-store' });
+        if (!response.ok) return;
+        const result = await response.json();
+        if (!Array.isArray(result.apps)) return;
+
+        appSelect.replaceChildren();
+        for (const app of result.apps) {
+          const option = document.createElement('option');
+          option.value = app.id;
+          option.textContent = app.available ? app.name : app.name + ' · Under development';
+          appSelect.append(option);
+        }
+        const addOption = document.createElement('option');
+        addOption.value = '__new__';
+        addOption.textContent = 'Add a new app…';
+        appSelect.append(addOption);
+        if (selectedId) appSelect.value = selectedId;
+        updateAppSelection();
+      } catch {}
+    }
     async function checkSession() {
       try {
         const response = await fetch('/api/session', { cache: 'no-store' });
@@ -95,6 +139,47 @@
         setStatus(loginStatus, 'Admin service is waking up. Refresh in a moment.', 'error');
       }
     }
+
+    appSelect.addEventListener('change', updateAppSelection);
+    newAppName.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        addAppButton.click();
+      }
+    });
+    addAppButton.addEventListener('click', async () => {
+      const name = newAppName.value.trim();
+      if (!name) {
+        setStatus(uploadStatus, 'Enter a name for the new app.', 'error');
+        newAppName.focus();
+        return;
+      }
+      addAppButton.disabled = true;
+      setStatus(uploadStatus, 'Adding the app to the library…');
+      try {
+        const response = await fetch('/api/apps', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not add the app.');
+        const option = document.createElement('option');
+        option.value = result.id;
+        option.textContent = result.name + ' · Under development';
+        const newOption = appSelect.querySelector('option[value="__new__"]');
+        appSelect.insertBefore(option, newOption);
+        appSelect.value = result.id;
+        newAppName.value = '';
+        updateAppSelection();
+        setStatus(uploadStatus, result.name + ' was added. Choose its APK when it is ready.', 'success');
+        loadApps(result.id);
+      } catch (error) {
+        setStatus(uploadStatus, error.message || 'Could not add the app. Please try again.', 'error');
+      } finally {
+        addAppButton.disabled = false;
+      }
+    });
 
     document.getElementById('login-form').addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -149,6 +234,7 @@
         if (xhr.status >= 200 && xhr.status < 300) {
           progressBar.style.width = '100%';
           setStatus(uploadStatus, result.cleanupWarning || ('Done. The ' + (result.appName || 'selected app') + ' download now serves this APK.'), 'success');
+          if (result.appId) loadApps(result.appId);
           document.getElementById('apk').value = '';
         } else if (xhr.status === 401) {
           showAuthenticated(false);
@@ -171,6 +257,7 @@
       setStatus(loginStatus, 'You are logged out.');
     });
 
+    loadApps();
     checkSession();
   </script>
 </body>
