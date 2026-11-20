@@ -67,6 +67,9 @@
         <div id="new-app-fields" class="hidden">
           <label for="new-app-name">New app name</label>
           <input id="new-app-name" type="text" maxlength="48" autocomplete="off" placeholder="For example, Family Planner">
+          <label for="new-app-logo">App logo (PNG)</label>
+          <input id="new-app-logo" type="file" accept=".png,image/png">
+          <p class="muted">Use a square PNG from 128×128 to 1024×1024 pixels. 512×512 is recommended; 2 MB maximum.</p>
           <p class="muted">This adds an app card marked Under development. You can upload its APK later.</p>
           <button id="add-app-button" type="button">Add app to library</button>
         </div>
@@ -89,6 +92,7 @@
     const uploadFields = document.getElementById('upload-fields');
     const newAppFields = document.getElementById('new-app-fields');
     const newAppName = document.getElementById('new-app-name');
+    const newAppLogo = document.getElementById('new-app-logo');
     const addAppButton = document.getElementById('add-app-button');
 
     function showAuthenticated(value) {
@@ -154,13 +158,31 @@
         newAppName.focus();
         return;
       }
+      const logo = newAppLogo.files[0];
+      if (!logo) {
+        setStatus(uploadStatus, 'Choose a PNG logo for the new app.', 'error');
+        newAppLogo.focus();
+        return;
+      }
+      if (!logo.name.toLowerCase().endsWith('.png') || (logo.type && logo.type !== 'image/png')) {
+        setStatus(uploadStatus, 'Choose a PNG image for the app logo.', 'error');
+        newAppLogo.focus();
+        return;
+      }
+      if (logo.size > 2 * 1024 * 1024) {
+        setStatus(uploadStatus, 'The PNG logo must be 2 MB or smaller.', 'error');
+        newAppLogo.focus();
+        return;
+      }
       addAppButton.disabled = true;
       setStatus(uploadStatus, 'Adding the app to the library…');
       try {
+        const details = new FormData();
+        details.append('name', name);
+        details.append('logo', logo, logo.name);
         const response = await fetch('/api/apps', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name }),
+          body: details,
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Could not add the app.');
@@ -171,6 +193,7 @@
         appSelect.insertBefore(option, newOption);
         appSelect.value = result.id;
         newAppName.value = '';
+        newAppLogo.value = '';
         updateAppSelection();
         setStatus(uploadStatus, result.name + ' was added. Choose its APK when it is ready.', 'success');
         loadApps(result.id);
