@@ -31,6 +31,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
 const PORT = Number(process.env.PORT || 10000);
 const MAX_UPLOAD_BYTES = 220 * 1024 * 1024;
+const MAX_APP_ICON_BYTES = 2 * 1024 * 1024;
 const SESSION_MS = 4 * 60 * 60 * 1000;
 const GITHUB_API_VERSION = '2026-03-10';
 
@@ -198,6 +199,99 @@ function receiveApk(req) {
   });
 }
 
+function receiveNewApp(req) {
+  return new Promise((resolve, reject) => {
+    let name = '';
+    let nameCount = 0;
+    let fileCount = 0;
+    let savedLogo = null;
+    let writeTask = Promise.resolve();
+    let failure = null;
+
+    let parser;
+    try {
+      parser = Busboy({
+        headers: req.headers,
+        limits: { fileSize: MAX_APP_ICON_BYTES, files: 2, fields: 2, fieldSize: 128, parts: 3 },
+      });
+    } catch {
+      reject(Object.assign(new Error('Enter an app name and choose a PNG logo.'), { statusCode: 400 }));
+      return;
+    }
+
+    parser.on('field', (field, value) => {
+      if (field !== 'name' || nameCount !== 0) {
+        failure = Object.assign(new Error('Enter one app name and choose one logo.'), { statusCode: 400 });
+        return;
+      }
+      nameCount += 1;
+      name = value;
+    });
+
+    parser.on('file', (field, input, metadata) => {
+      fileCount += 1;
+      if (field !== 'logo' || fileCount !== 1) {
+        failure = Object.assign(new Error('Choose one PNG app logo.'), { statusCode: 400 });
+        input.resume();
+        return;
+      }
+      const tempPath = path.join(os.tmpdir(), 'finbud-app-icon-' + crypto.randomUUID() + '.png');
+      let size = 0;
+      const counter = new Transform({
+        transform(chunk, encoding, callback) {
+          size += chunk.length;
+          callback(null, chunk);
+        },
+      });
+      input.on('limit', () => {
+        failure = Object.assign(new Error('The PNG logo must be 2 MB or smaller.'), { statusCode: 413 });
+      });
+      writeTask = pipeline(input, counter, fs.createWriteStream(tempPath, { flags: 'wx' }))
+        .then(() => {
+          if (input.truncated) failure = Object.assign(new Error('The PNG logo must be 2 MB or smaller.'), { statusCode: 413 });
+          savedLogo = { path: tempPath, size, originalName: metadata.filename || 'app-logo.png' };
+        })
+        .catch((error) => { failure = error; });
+    });
+
+    parser.on('fieldsLimit', () => { failure = Object.assign(new Error('Unexpected app details.'), { statusCode: 400 }); });
+    parser.on('filesLimit', () => { failure = Object.assign(new Error('Choose one PNG app logo.'), { statusCode: 400 }); });
+    parser.on('partsLimit', () => { failure = Object.assign(new Error('Enter one app name and choose one logo.'), { statusCode: 400 }); });
+    parser.on('error', reject);
+    parser.on('finish', async () => {
+      try {
+        await writeTask;
+        if (failure) throw failure;
+        if (!nameCount || !name.trim()) throw Object.assign(new Error('Enter a name for the new app.'), { statusCode: 400 });
+        if (!savedLogo || fileCount !== 1) throw Object.assign(new Error('Choose a PNG logo for the new app.'), { statusCode: 400 });
+        if (!savedLogo.originalName.toLowerCase().endsWith('.png') || savedLogo.size < 24) {
+          throw Object.assign(new Error('Choose a valid PNG image for the app logo.'), { statusCode: 400 });
+        }
+
+        const handle = await fsp.open(savedLogo.path, 'r');
+        const header = Buffer.alloc(24);
+        const read = await handle.read(header, 0, header.length, 0);
+        await handle.close();
+        const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+        if (read.bytesRead < 24 || !header.subarray(0, 8).equals(signature)) {
+          throw Object.assign(new Error('Choose a valid PNG image for the app logo.'), { statusCode: 400 });
+        }
+        const width = header.readUInt32BE(16);
+        const height = header.readUInt32BE(20);
+        if (width !== height || width < 128 || width > 1024) {
+          throw Object.assign(new Error('Use a square PNG logo between 128×128 and 1024×1024 pixels.'), { statusCode: 400 });
+        }
+        resolve({ name, logo: savedLogo });
+      } catch (error) {
+        if (savedLogo?.path) await fsp.unlink(savedLogo.path).catch(() => {});
+        reject(error);
+      }
+    });
+
+    req.pipe(parser);
+  });
+}
+
 function githubErrorDetail(text) {
   try {
     const message = JSON.parse(text).message;
@@ -226,6 +320,27 @@ async function githubApi(pathname, method = 'GET', payload) {
     throw error;
   }
   return text ? JSON.parse(text) : null;
+}
+
+async function saveAppLogo(slug, name, logo) {
+  const filePath = 'app-icons/' + slug + '.png';
+  const contentsPath = '/repos/' + OWNER + '/' + REPOSITORY + '/contents/' + filePath;
+  let existingSha = null;
+  try {
+    const existing = await githubApi(contentsPath);
+    existingSha = existing.sha;
+  } catch (error) {
+    if (!error.message.includes('HTTP 404')) throw error;
+  }
+
+  const payload = {
+    message: 'Save app logo for ' + name,
+    content: await fsp.readFile(logo.path, { encoding: 'base64' }),
+    branch: 'main',
+    ...(existingSha ? { sha: existingSha } : {}),
+  };
+  const saved = await githubApi(contentsPath, 'PUT', payload);
+  return 'https://raw.githubusercontent.com/' + OWNER + '/' + REPOSITORY + '/main/' + filePath + '?v=' + encodeURIComponent(saved.commit.sha);
 }
 
 async function uploadReleaseAsset(release, assetName, file) {
@@ -281,6 +396,9 @@ async function getCatalogEntries() {
         name: app.name,
         available: Boolean(asset),
         ...(asset ? { size: asset.size, downloadUrl: asset.browser_download_url } : {}),
+        ...(app.id.startsWith(CUSTOM_APP_TAG_PREFIX)
+          ? { iconUrl: 'https://raw.githubusercontent.com/' + OWNER + '/' + REPOSITORY + '/main/app-icons/' + app.releaseTag.slice(CUSTOM_APP_TAG_PREFIX.length) + '.png?v=' + Date.now() }
+          : {}),
       },
     };
   });
@@ -411,35 +529,44 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/apps') {
       if (!isSameOrigin(req)) return json(res, 403, { error: 'App creation request rejected.' });
       if (!currentSession(req)) return json(res, 401, { error: 'Sign in again before adding an app.' });
-      let body;
-      try { body = await requestBody(req, 2048); }
-      catch (error) { return json(res, error.statusCode || 400, { error: error.message }); }
-
-      const name = typeof body.name === 'string' ? body.name.trim().replace(/\s+/g, ' ') : '';
-      if (name.length < 2 || name.length > 48) return json(res, 400, { error: 'App name must be between 2 and 48 characters.' });
-      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48).replace(/-+$/g, '');
-      if (!slug) return json(res, 400, { error: 'Use an app name with English letters or numbers so its download link can be created.' });
-
+      let details = null;
       try {
+        details = await receiveNewApp(req);
+        const name = details.name.trim().replace(/\s+/g, ' ');
+        if (name.length < 2 || name.length > 48) throw Object.assign(new Error('App name must be between 2 and 48 characters.'), { statusCode: 400 });
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48).replace(/-+$/g, '');
+        if (!slug) throw Object.assign(new Error('Use an app name with English letters or numbers so its download link can be created.'), { statusCode: 400 });
+
         const entries = await getCatalogEntries();
-        if (entries.some((entry) => entry.app.name.toLowerCase() === name.toLowerCase())) {
-          return json(res, 409, { error: 'An app with that name is already in the library.' });
-        }
         const releaseTag = CUSTOM_APP_TAG_PREFIX + slug;
-        if (entries.some((entry) => entry.app.releaseTag === releaseTag)) {
-          return json(res, 409, { error: 'An app with a similar name already exists. Choose a different name.' });
+        const existing = entries.find((entry) => entry.app.releaseTag === releaseTag);
+        if (existing && existing.app.name.toLowerCase() !== name.toLowerCase()) {
+          throw Object.assign(new Error('An app with a similar name already exists. Choose a different name.'), { statusCode: 409 });
+        }
+        const duplicate = entries.find((entry) => entry.app.name.toLowerCase() === name.toLowerCase() && entry.app.releaseTag !== releaseTag);
+        if (duplicate) throw Object.assign(new Error('An app with that name is already in the library.'), { statusCode: 409 });
+
+        if (!existing) {
+          await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases', 'POST', {
+            tag_name: releaseTag,
+            name,
+            body: 'App Library entry for ' + name + '.',
+            draft: false,
+            prerelease: false,
+          });
         }
 
-        const release = await githubApi('/repos/' + OWNER + '/' + REPOSITORY + '/releases', 'POST', {
-          tag_name: releaseTag,
+        const iconUrl = await saveAppLogo(slug, name, details.logo);
+        return json(res, existing ? 200 : 201, {
+          id: releaseTag,
           name,
-          body: 'App Library entry for ' + name + '.',
-          draft: false,
-          prerelease: false,
+          available: Boolean(existing?.info.available),
+          iconUrl,
         });
-        return json(res, 201, { id: releaseTag, name: release.name || name, available: false });
       } catch (error) {
         return json(res, error.statusCode || 502, { error: error.message || 'Could not add the app. Please try again.' });
+      } finally {
+        if (details?.logo?.path) await fsp.unlink(details.logo.path).catch(() => {});
       }
     }
 
