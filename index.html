@@ -128,6 +128,7 @@
     }
     .download-button:hover { background: var(--green-dark); transform: translateY(-1px); }
     .download-button:focus-visible { outline: 3px solid #a9d7c7; outline-offset: 3px; }
+    .download-button[hidden], .download-details[hidden], .development-note[hidden] { display: none; }
     .download-details { margin: 9px 0 0; color: var(--muted); font-size: 13px; text-align: center; }
     .development-note {
       display: flex;
@@ -197,15 +198,15 @@
           <div class="app-heading">
             <div class="title-row">
               <h2 id="finbud-title">FinBud</h2>
-              <span class="status status-available">Available</span>
+              <span class="status status-available" id="finbud-status">Available</span>
             </div>
             <p class="category">Finance</p>
           </div>
         </div>
         <p class="description">A private household ledger for two earners.</p>
         <div>
-          <a class="download-button" id="download-apk" href="https://github.com/SriramFit123/finbud-download/releases/download/v1.0.0/FinBud.apk">Download FinBud APK</a>
-          <p class="download-details">Android · Requires Android 7.0 (API 24) or newer.</p>
+          <a class="download-button" id="finbud-download" href="https://github.com/SriramFit123/finbud-download/releases/download/v1.0.0/FinBud.apk">Download FinBud APK</a>
+          <p class="download-details" id="finbud-details">Android · Requires Android 7.0 (API 24) or newer.</p>
         </div>
       </article>
 
@@ -223,13 +224,15 @@
           <div class="app-heading">
             <div class="title-row">
               <h2 id="supermom-title">SuperMom</h2>
-              <span class="status status-development">Under development</span>
+              <span class="status status-development" id="supermom-status">Under development</span>
             </div>
-            <p class="category">Coming soon</p>
+            <p class="category" id="supermom-category">Coming soon</p>
           </div>
         </div>
-        <p class="description">SuperMom is being built now. Its download will appear here when it’s ready.</p>
-        <div class="development-note"><span class="development-dot" aria-hidden="true"></span>Download not available yet</div>
+        <p class="description" id="supermom-description">SuperMom is being built now. Its download will appear here when it’s ready.</p>
+        <a class="download-button" id="supermom-download" href="https://github.com/SriramFit123/finbud-download/releases/download/supermom-latest/SuperMom.apk" hidden>Download SuperMom APK</a>
+          <p class="download-details" id="supermom-details" hidden></p>
+          <div class="development-note" id="supermom-note"><span class="development-dot" aria-hidden="true"></span>Download not available yet</div>
       </article>
     </section>
 
@@ -240,8 +243,6 @@
   </main>
 
   <script>
-    const downloadButton = document.getElementById('download-apk');
-
     function formatFileSize(bytes) {
       const units = ['B', 'KB', 'MB', 'GB'];
       let size = bytes;
@@ -253,12 +254,50 @@
       return size.toFixed(unit === 0 ? 0 : 1) + ' ' + units[unit];
     }
 
-    fetch('https://finbud-apk-admin-sriramfit123.onrender.com/api/release', { cache: 'no-store' })
+    function updateAppCard(app) {
+      const button = document.getElementById(app.id + '-download');
+      const status = document.getElementById(app.id + '-status');
+      if (!button || !status) return;
+
+      if (!app.available || !Number.isFinite(app.size) || !app.downloadUrl) {
+        if (app.id === 'supermom') {
+          button.hidden = true;
+          status.className = 'status status-development';
+          status.textContent = 'Under development';
+          document.getElementById('supermom-category').textContent = 'Coming soon';
+          document.getElementById('supermom-description').textContent = 'SuperMom is being built now. Its download will appear here when it’s ready.';
+          document.getElementById('supermom-details').hidden = true;
+          document.getElementById('supermom-note').hidden = false;
+        }
+        return;
+      }
+
+      status.className = 'status status-available';
+      status.textContent = 'Available';
+      button.href = app.downloadUrl;
+      button.textContent = 'Download ' + app.name + ' APK · ' + formatFileSize(app.size);
+      button.hidden = false;
+
+      const details = document.getElementById(app.id + '-details');
+      if (details) {
+        details.textContent = app.id === 'finbud'
+          ? 'Android · Requires Android 7.0 (API 24) or newer.'
+          : 'Android APK';
+        details.hidden = false;
+      }
+
+      if (app.id === 'supermom') {
+        document.getElementById('supermom-category').textContent = 'Android';
+        document.getElementById('supermom-description').textContent = 'SuperMom is ready to download.';
+        document.getElementById('supermom-note').hidden = true;
+      }
+    }
+
+    fetch('https://finbud-apk-admin-sriramfit123.onrender.com/api/apps', { cache: 'no-store' })
       .then((response) => response.ok ? response.json() : null)
-      .then((release) => {
-        if (!release?.available || !Number.isFinite(release.size) || !release.downloadUrl) return;
-        downloadButton.href = release.downloadUrl;
-        downloadButton.textContent = 'Download FinBud APK · ' + formatFileSize(release.size);
+      .then((result) => {
+        if (!Array.isArray(result?.apps)) return;
+        result.apps.forEach(updateAppCard);
       })
       .catch(() => {});
   </script>
