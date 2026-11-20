@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0e7a63">
-  <title>FinBud Admin — APK Upload</title>
+  <title>App Downloads Admin — APK Upload</title>
   <style>
     :root { color-scheme: light; --green: #0e7a63; --ink: #17332d; --muted: #60736d; --line: #dce9e4; }
     * { box-sizing: border-box; }
@@ -15,8 +15,8 @@
     .muted { color: var(--muted); }
     .panel { margin-top: 24px; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: #f7faf8; }
     label { display: block; margin: 12px 0 5px; font-size: 14px; font-weight: 650; }
-    input[type="text"], input[type="password"], input[type="file"] { width: 100%; padding: 12px; border: 1px solid #bdcec7; border-radius: 8px; background: white; color: var(--ink); font: inherit; }
-    input:focus-visible, button:focus-visible { outline: 3px solid #9bcbbb; outline-offset: 2px; }
+    input[type="text"], input[type="password"], input[type="file"], select { width: 100%; padding: 12px; border: 1px solid #bdcec7; border-radius: 8px; background: white; color: var(--ink); font: inherit; }
+    input:focus-visible, select:focus-visible, button:focus-visible { outline: 3px solid #9bcbbb; outline-offset: 2px; }
     button { width: 100%; margin-top: 16px; padding: 13px 18px; border: 1px solid var(--green); border-radius: 9px; background: var(--green); color: white; font: inherit; font-weight: 700; cursor: pointer; }
     button:hover { background: #0a5e4d; }
     button.secondary { border-color: #aebfb8; background: white; color: var(--ink); }
@@ -35,8 +35,8 @@
 <body>
   <main>
     <div class="mark" aria-hidden="true">F</div>
-    <h1>FinBud Admin</h1>
-    <p class="muted">Upload a new APK. The public download will update automatically.</p>
+    <h1>App Downloads Admin</h1>
+    <p class="muted">Choose an app, then upload its APK. Only that app’s public download will be updated.</p>
 
     <section id="login-panel" class="panel">
       <form id="login-form">
@@ -51,17 +51,22 @@
 
     <section id="upload-panel" class="panel hidden">
       <form id="upload-form">
-        <label for="apk">Choose the new Android APK</label>
+        <label for="app-id">Select app to update</label>
+        <select id="app-id" name="appId" required>
+          <option value="finbud">FinBud</option>
+          <option value="supermom">SuperMom</option>
+        </select>
+        <label for="apk">Choose the Android APK file</label>
         <input id="apk" name="apk" type="file" accept=".apk,application/vnd.android.package-archive" required>
-        <p class="muted">Select the APK you built. The portal will replace the current download automatically.</p>
-        <button id="upload-button" type="submit">Upload and update download</button>
+        <p class="muted">The APK will replace the download for the selected app.</p>
+        <button id="upload-button" type="submit">Upload and update selected app</button>
         <div id="progress" class="progress hidden" aria-hidden="true"><span id="progress-bar"></span></div>
       </form>
       <p id="upload-status" class="status" role="status" aria-live="polite"></p>
       <button id="logout-button" class="secondary" type="button">Log out</button>
     </section>
 
-    <footer><a href="https://sriramfit123.github.io/finbud-download/">Back to public FinBud downloads</a></footer>
+    <footer><a href="https://sriramfit123.github.io/finbud-download/">Back to App Library</a></footer>
   </main>
   <script>
     const loginPanel = document.getElementById('login-panel');
@@ -108,7 +113,7 @@
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Could not sign in.');
         showAuthenticated(true);
-        setStatus(uploadStatus, 'Signed in. Choose an APK to upload.');
+        setStatus(uploadStatus, 'Signed in. Select an app and choose its APK file.');
       } catch (error) {
         setStatus(loginStatus, error.message, 'error');
       } finally {
@@ -127,6 +132,7 @@
       setStatus(uploadStatus, 'Uploading APK to GitHub…');
 
       const form = new FormData();
+      form.append('appId', document.getElementById('app-id').value);
       form.append('apk', file, file.name);
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload');
@@ -142,7 +148,7 @@
         try { result = JSON.parse(xhr.responseText || '{}'); } catch {}
         if (xhr.status >= 200 && xhr.status < 300) {
           progressBar.style.width = '100%';
-          setStatus(uploadStatus, result.cleanupWarning || 'Done. The public download button now serves this APK.', 'success');
+          setStatus(uploadStatus, result.cleanupWarning || ('Done. The ' + (result.appName || 'selected app') + ' download now serves this APK.'), 'success');
           document.getElementById('apk').value = '';
         } else if (xhr.status === 401) {
           showAuthenticated(false);
