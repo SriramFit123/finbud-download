@@ -17,64 +17,24 @@
       --background: #f7f8fa;
     }
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: var(--background);
-      color: var(--ink);
-      font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
-    }
-    .topbar {
-      position: sticky;
-      z-index: 2;
-      top: 0;
-      height: 68px;
-      border-bottom: 1px solid var(--line);
-      background: rgba(255,255,255,.96);
-      backdrop-filter: blur(12px);
-    }
-    .topbar-inner {
-      display: flex;
-      width: min(100% - 40px, 1180px);
-      height: 100%;
-      align-items: center;
-      justify-content: space-between;
-      margin: 0 auto;
-    }
+    body { margin: 0; min-height: 100vh; background: var(--background); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .topbar { position: sticky; z-index: 2; top: 0; height: 68px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.96); backdrop-filter: blur(12px); }
+    .topbar-inner { display: flex; width: min(100% - 40px, 1180px); height: 100%; align-items: center; justify-content: space-between; margin: 0 auto; }
     .brand { display: inline-flex; align-items: center; gap: 10px; color: #3c4043; text-decoration: none; font-size: 19px; font-weight: 650; }
-    .brand-icon {
-      display: grid;
-      width: 32px;
-      height: 32px;
-      place-items: center;
-      border-radius: 10px;
-      background: #e8f0fe;
-      color: var(--blue);
-      font-size: 19px;
-      font-weight: 800;
-    }
+    .brand-icon { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 10px; background: #e8f0fe; color: var(--blue); font-size: 19px; font-weight: 800; }
     .nav { display: flex; align-items: center; gap: 26px; }
     .nav a { color: var(--muted); font-size: 14px; text-decoration: none; }
     .nav a:hover, .nav a:focus-visible { color: var(--blue); }
     .nav .admin-link { color: var(--blue); font-weight: 650; }
     main { width: min(100% - 40px, 1180px); margin: 0 auto; }
+    #library-view[hidden], #details-view[hidden] { display: none; }
     .hero { padding: 40px 0 24px; }
     .eyebrow { margin: 0 0 5px; color: var(--blue); font-size: 12px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
     h1 { margin: 0; font-size: clamp(28px, 4vw, 36px); font-weight: 550; letter-spacing: -.7px; }
     .hero-copy { margin: 7px 0 20px; color: var(--muted); font-size: 15px; }
     .search-wrap { position: relative; width: min(100%, 560px); }
     .search-wrap::before { position: absolute; top: 9px; left: 15px; color: #6f7780; content: "⌕"; font-size: 24px; line-height: 1; }
-    .search {
-      width: 100%;
-      height: 46px;
-      padding: 0 16px 0 44px;
-      border: 1px solid #e2e5e9;
-      border-radius: 24px;
-      background: #edf1f7;
-      color: var(--ink);
-      font: inherit;
-      outline: none;
-    }
+    .search { width: 100%; height: 46px; padding: 0 16px 0 44px; border: 1px solid #e2e5e9; border-radius: 24px; background: #edf1f7; color: var(--ink); font: inherit; outline: none; }
     .search:focus { border-color: #9ab9ed; background: white; box-shadow: 0 0 0 2px #e4edfc; }
     .shelf { margin: 14px 0 38px; }
     .shelf[hidden] { display: none; }
@@ -82,73 +42,51 @@
     h2 { margin: 0; font-size: 21px; font-weight: 550; letter-spacing: -.25px; }
     .shelf-count { color: var(--muted); font-size: 13px; }
     .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(164px, 1fr)); gap: 12px; }
-    .app-tile {
-      display: flex;
-      min-width: 0;
-      min-height: 258px;
-      flex-direction: column;
-      padding: 15px;
-      border: 1px solid #eaedf0;
-      border-radius: 16px;
-      background: var(--surface);
-      transition: box-shadow .16s ease, transform .16s ease;
-    }
+    .app-tile { display: flex; min-width: 0; min-height: 258px; flex-direction: column; padding: 15px; border: 1px solid #eaedf0; border-radius: 16px; background: var(--surface); transition: box-shadow .16s ease, transform .16s ease; }
     .app-tile:hover { box-shadow: 0 5px 18px #20212412; transform: translateY(-2px); }
     .app-tile[hidden] { display: none; }
+    .tile-main { display: block; color: inherit; text-decoration: none; }
+    .tile-main:focus-visible { outline: 3px solid #a9c7f4; outline-offset: 3px; border-radius: 12px; }
     .tile-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-    .app-icon {
-      position: relative;
-      display: grid;
-      width: 72px;
-      height: 72px;
-      flex: 0 0 72px;
-      place-items: center;
-      overflow: hidden;
-      border-radius: 18px;
-      background: #e8f0fe;
-      box-shadow: inset 0 0 0 1px #20212412;
-    }
+    .app-icon { position: relative; display: grid; width: 72px; height: 72px; flex: 0 0 72px; place-items: center; overflow: hidden; border-radius: 18px; background: #e8f0fe; box-shadow: inset 0 0 0 1px #20212412; }
     .app-icon img { position: absolute; z-index: 1; width: 100%; height: 100%; object-fit: cover; }
     .icon-fallback { color: #34558b; font-size: 34px; font-weight: 750; }
     .finbud-icon { background: var(--green); color: white; font-size: 38px; font-weight: 800; }
     .supermom-icon { background: #fce8ef; }
-    .app-status {
-      display: inline-flex;
-      align-items: center;
-      min-height: 22px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: #e8f5ed;
-      color: #28704d;
-      font-size: 10px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
+    .app-status { display: inline-flex; align-items: center; min-height: 22px; padding: 2px 8px; border-radius: 999px; background: #e8f5ed; color: #28704d; font-size: 10px; font-weight: 700; white-space: nowrap; }
     .app-status.developing { background: #fff4df; color: #875a10; }
     .app-name { margin: 13px 0 2px; font-size: 16px; font-weight: 650; line-height: 1.3; overflow-wrap: anywhere; }
     .app-category { margin: 0; color: var(--muted); font-size: 12px; }
     .app-description { display: -webkit-box; min-height: 38px; margin: 9px 0 11px; overflow: hidden; color: #4f555b; font-size: 12px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-    .download-link {
-      display: flex;
-      min-height: 38px;
-      align-items: center;
-      justify-content: center;
-      margin-top: auto;
-      padding: 7px 10px;
-      border: 1px solid #c8d9f6;
-      border-radius: 20px;
-      background: #edf3fe;
-      color: #174ea6;
-      font-size: 12px;
-      font-weight: 700;
-      text-align: center;
-      text-decoration: none;
-      transition: background .15s ease;
-    }
+    .download-link { display: flex; min-height: 38px; align-items: center; justify-content: center; margin-top: auto; padding: 7px 10px; border: 1px solid #c8d9f6; border-radius: 20px; background: #edf3fe; color: #174ea6; font-size: 12px; font-weight: 700; text-align: center; text-decoration: none; transition: background .15s ease; }
     .download-link:hover { background: #dce8fb; }
     .download-link:focus-visible { outline: 3px solid #a9c7f4; outline-offset: 2px; }
     .download-link[hidden], .tile-note[hidden] { display: none; }
     .tile-note { margin: auto 0 0; padding-top: 9px; color: #8a611c; font-size: 12px; font-weight: 650; }
+
+    .details-view { padding: 28px 0 42px; }
+    .back-link { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px; color: #4b5563; font-size: 14px; font-weight: 650; text-decoration: none; }
+    .back-link:hover { color: var(--blue); }
+    .detail-hero { display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: 28px; align-items: center; padding: clamp(22px, 4vw, 38px); border: 1px solid #e5e8ec; border-radius: 20px; background: white; }
+    .detail-category { margin: 0 0 6px; color: var(--blue); font-size: 14px; font-weight: 650; }
+    .detail-title { margin: 0; font-size: clamp(30px, 5vw, 42px); font-weight: 550; letter-spacing: -.9px; }
+    .detail-status { margin: 9px 0 18px; color: #28704d; font-size: 14px; font-weight: 650; }
+    .detail-status.developing { color: #875a10; }
+    .detail-download { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 10px 22px; border: 1px solid var(--green); border-radius: 24px; background: var(--green); color: white; font-weight: 700; text-decoration: none; }
+    .detail-download:hover { background: #0a5e4d; }
+    .detail-download[hidden], .detail-note[hidden] { display: none; }
+    .detail-note { display: inline-flex; align-items: center; min-height: 44px; padding: 9px 15px; border: 1px solid #f0dfb9; border-radius: 12px; background: #fffaf0; color: #79521b; font-size: 14px; font-weight: 650; }
+    .detail-icon { display: grid; width: 120px; height: 120px; place-items: center; justify-self: end; overflow: hidden; border-radius: 28px; background: #e8f0fe; box-shadow: 0 4px 16px #20212412; }
+    .detail-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .detail-icon .icon-fallback { font-size: 58px; }
+    .detail-icon.finbud-icon { font-size: 70px; }
+    .detail-section { margin-top: 22px; padding: 24px clamp(20px, 4vw, 32px); border: 1px solid #e5e8ec; border-radius: 18px; background: white; }
+    .detail-section h2 { margin-bottom: 10px; font-size: 20px; font-weight: 600; }
+    .detail-description { max-width: 760px; margin: 0; color: #4f555b; line-height: 1.7; white-space: pre-line; }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+    .info-item { padding: 13px 15px; border-radius: 12px; background: #f7f8fa; }
+    .info-item span { display: block; margin-bottom: 4px; color: var(--muted); font-size: 12px; }
+    .info-item strong { display: block; font-size: 14px; font-weight: 650; }
     .site-footer { display: flex; justify-content: space-between; gap: 16px; margin: 44px 0 24px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
     .site-footer a { color: var(--blue); text-decoration: none; }
     @media (max-width: 680px) {
@@ -161,6 +99,11 @@
       .app-tile { min-height: 246px; padding: 13px; }
       .app-icon { width: 64px; height: 64px; flex-basis: 64px; border-radius: 16px; }
       .finbud-icon { font-size: 34px; }
+      .details-view { padding-top: 20px; }
+      .detail-hero { grid-template-columns: minmax(0, 1fr) 88px; gap: 14px; padding: 20px; }
+      .detail-icon { width: 84px; height: 84px; border-radius: 20px; }
+      .detail-icon.finbud-icon { font-size: 52px; }
+      .detail-section { padding: 20px; }
     }
     @media (max-width: 390px) {
       .nav a[href="#development-shelf"] { display: none; }
@@ -168,15 +111,17 @@
       .app-tile { min-height: 252px; }
       .shelf-heading { margin-bottom: 10px; }
       h2 { font-size: 19px; }
+      .detail-hero { grid-template-columns: 1fr; }
+      .detail-icon { grid-row: 1; justify-self: start; }
     }
   </style>
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <a class="brand" href="./"><span class="brand-icon" aria-hidden="true">A</span><span>App Library</span></a>
+      <a class="brand" href="#apps"><span class="brand-icon" aria-hidden="true">A</span><span>App Library</span></a>
       <nav class="nav" aria-label="Main navigation">
-        <a href="#available-shelf">Apps</a>
+        <a href="#apps">Apps</a>
         <a href="#development-shelf">In development</a>
         <a class="admin-link" href="https://finbud-apk-admin-sriramfit123.onrender.com/">Admin</a>
       </nav>
@@ -184,72 +129,114 @@
   </header>
 
   <main>
-    <section class="hero" aria-labelledby="page-title">
-      <p class="eyebrow">Explore</p>
-      <h1 id="page-title">Find an app for your day</h1>
-      <p class="hero-copy">Browse apps that are ready to download and ones still in development.</p>
-      <label class="search-wrap">
-        <span class="visually-hidden" hidden>Search apps</span>
-        <input class="search" id="app-search" type="search" placeholder="Search apps" aria-label="Search apps">
-      </label>
+    <section id="library-view">
+      <section class="hero" aria-labelledby="page-title">
+        <p class="eyebrow">Explore</p>
+        <h1 id="page-title">Find an app for your day</h1>
+        <p class="hero-copy">Browse apps that are ready to download and ones still in development.</p>
+        <label class="search-wrap">
+          <input class="search" id="app-search" type="search" placeholder="Search apps" aria-label="Search apps">
+        </label>
+      </section>
+
+      <section class="shelf" id="available-shelf" aria-labelledby="available-title">
+        <div class="shelf-heading">
+          <h2 id="available-title">Available to download</h2>
+          <span class="shelf-count" id="available-count"></span>
+        </div>
+        <div class="app-grid" id="available-grid">
+          <article class="app-tile" id="finbud-card" data-app-id="finbud" data-app-name="finbud">
+            <a class="tile-main" href="#app/finbud">
+              <div class="tile-top">
+                <div class="app-icon finbud-icon" aria-hidden="true">F</div>
+                <span class="app-status">Available</span>
+              </div>
+              <h3 class="app-name">FinBud</h3>
+              <p class="app-category">Finance</p>
+              <p class="app-description">A private household ledger for two earners.</p>
+            </a>
+            <a class="download-link" data-download href="https://github.com/SriramFit123/finbud-download/releases/download/v1.0.0/FinBud.apk">Download FinBud APK</a>
+          </article>
+        </div>
+      </section>
+
+      <section class="shelf" id="development-shelf" aria-labelledby="development-title">
+        <div class="shelf-heading">
+          <h2 id="development-title">In development</h2>
+          <span class="shelf-count" id="development-count"></span>
+        </div>
+        <div class="app-grid" id="development-grid">
+          <article class="app-tile" id="supermom-card" data-app-id="supermom" data-app-name="supermom">
+            <a class="tile-main" href="#app/supermom">
+              <div class="tile-top">
+                <div class="app-icon supermom-icon" aria-hidden="true">
+                  <svg viewBox="0 0 64 64" width="64" height="64" focusable="false">
+                    <circle cx="26" cy="22" r="8" fill="#bd3e68"/>
+                    <path d="M11 51c2-10 7-16 15-16s13 6 15 16" fill="#bd3e68"/>
+                    <circle cx="44" cy="29" r="6" fill="#e58ba7"/>
+                    <path d="M35 51c1-7 4-11 9-11s8 4 9 11" fill="#e58ba7"/>
+                    <path d="M31 32c-2-2-5-1-5 2 0 3 6 7 6 7s6-4 6-7c0-3-3-4-5-2l-1 1z" fill="#fff"/>
+                  </svg>
+                </div>
+                <span class="app-status developing">Under development</span>
+              </div>
+              <h3 class="app-name">SuperMom</h3>
+              <p class="app-category">Coming soon</p>
+              <p class="app-description">SuperMom is being built now. Its download will appear here when it’s ready.</p>
+            </a>
+            <a class="download-link" data-download href="https://github.com/SriramFit123/finbud-download/releases/download/supermom-latest/SuperMom.apk" hidden>Download SuperMom APK</a>
+            <p class="tile-note">Download not available yet</p>
+          </article>
+        </div>
+      </section>
+
+      <footer class="site-footer">
+        <span>More apps will appear here as they’re ready.</span>
+        <a href="https://finbud-apk-admin-sriramfit123.onrender.com/">Admin</a>
+      </footer>
     </section>
 
-    <section class="shelf" id="available-shelf" aria-labelledby="available-title">
-      <div class="shelf-heading">
-        <h2 id="available-title">Available to download</h2>
-        <span class="shelf-count" id="available-count"></span>
-      </div>
-      <div class="app-grid" id="available-grid">
-        <article class="app-tile" id="finbud-card" data-app-id="finbud" data-app-name="finbud">
-          <div class="tile-top">
-            <div class="app-icon finbud-icon" aria-hidden="true">F</div>
-            <span class="app-status">Available</span>
+    <section id="details-view" class="details-view" hidden aria-live="polite">
+      <a class="back-link" href="#apps">← All apps</a>
+      <article>
+        <div class="detail-hero">
+          <div>
+            <p class="detail-category" id="detail-category"></p>
+            <h1 class="detail-title" id="detail-name"></h1>
+            <p class="detail-status" id="detail-status"></p>
+            <a class="detail-download" id="detail-download" href="#" hidden></a>
+            <span class="detail-note" id="detail-note" hidden>Download not available yet</span>
           </div>
-          <h3 class="app-name">FinBud</h3>
-          <p class="app-category">Finance</p>
-          <p class="app-description">A private household ledger for two earners.</p>
-          <a class="download-link" data-download href="https://github.com/SriramFit123/finbud-download/releases/download/v1.0.0/FinBud.apk">Download FinBud APK</a>
-        </article>
-      </div>
-    </section>
+          <div class="detail-icon" id="detail-icon" aria-hidden="true"></div>
+        </div>
 
-    <section class="shelf" id="development-shelf" aria-labelledby="development-title">
-      <div class="shelf-heading">
-        <h2 id="development-title">In development</h2>
-        <span class="shelf-count" id="development-count"></span>
-      </div>
-      <div class="app-grid" id="development-grid">
-        <article class="app-tile" id="supermom-card" data-app-id="supermom" data-app-name="supermom">
-          <div class="tile-top">
-            <div class="app-icon supermom-icon" aria-hidden="true">
-              <svg viewBox="0 0 64 64" width="64" height="64" focusable="false">
-                <circle cx="26" cy="22" r="8" fill="#bd3e68"/>
-                <path d="M11 51c2-10 7-16 15-16s13 6 15 16" fill="#bd3e68"/>
-                <circle cx="44" cy="29" r="6" fill="#e58ba7"/>
-                <path d="M35 51c1-7 4-11 9-11s8 4 9 11" fill="#e58ba7"/>
-                <path d="M31 32c-2-2-5-1-5 2 0 3 6 7 6 7s6-4 6-7c0-3-3-4-5-2l-1 1z" fill="#fff"/>
-              </svg>
-            </div>
-            <span class="app-status developing">Under development</span>
+        <section class="detail-section" aria-labelledby="about-title">
+          <h2 id="about-title">About this app</h2>
+          <p class="detail-description" id="detail-description"></p>
+        </section>
+
+        <section class="detail-section" aria-labelledby="app-info-title">
+          <h2 id="app-info-title">App information</h2>
+          <div class="info-grid">
+            <div class="info-item"><span>Availability</span><strong id="detail-availability"></strong></div>
+            <div class="info-item"><span>Platform</span><strong>Android</strong></div>
+            <div class="info-item" id="detail-size-row" hidden><span>Download size</span><strong id="detail-size"></strong></div>
+            <div class="info-item" id="detail-requirements-row" hidden><span>Android requirement</span><strong>Android 7.0 (API 24) or newer</strong></div>
           </div>
-          <h3 class="app-name">SuperMom</h3>
-          <p class="app-category">Coming soon</p>
-          <p class="app-description">SuperMom is being built now. Its download will appear here when it’s ready.</p>
-          <a class="download-link" data-download href="https://github.com/SriramFit123/finbud-download/releases/download/supermom-latest/SuperMom.apk" hidden>Download SuperMom APK</a>
-          <p class="tile-note">Download not available yet</p>
-        </article>
-      </div>
+        </section>
+      </article>
     </section>
-
-    <footer class="site-footer">
-      <span>More apps will appear here as they’re ready.</span>
-      <a href="https://finbud-apk-admin-sriramfit123.onrender.com/">Admin</a>
-    </footer>
   </main>
 
   <script>
-    const downloadRoot = document.getElementById('available-grid');
+    const availableRoot = document.getElementById('available-grid');
     const developmentRoot = document.getElementById('development-grid');
+    const appData = new Map();
+
+    const finbudDownload = 'https://github.com/SriramFit123/finbud-download/releases/download/v1.0.0/FinBud.apk';
+    const supermomDownload = 'https://github.com/SriramFit123/finbud-download/releases/download/supermom-latest/SuperMom.apk';
+    appData.set('finbud', { id: 'finbud', name: 'FinBud', available: true, downloadUrl: finbudDownload });
+    appData.set('supermom', { id: 'supermom', name: 'SuperMom', available: false, downloadUrl: supermomDownload });
 
     function formatFileSize(bytes) {
       const units = ['B', 'KB', 'MB', 'GB'];
@@ -263,7 +250,7 @@
     }
 
     function updateShelfVisibility() {
-      const availableCards = Array.from(downloadRoot.children).filter((card) => !card.hidden);
+      const availableCards = Array.from(availableRoot.children).filter((card) => !card.hidden);
       const developmentCards = Array.from(developmentRoot.children).filter((card) => !card.hidden);
       document.getElementById('available-shelf').hidden = availableCards.length === 0;
       document.getElementById('development-shelf').hidden = developmentCards.length === 0;
@@ -271,18 +258,58 @@
       document.getElementById('development-count').textContent = developmentCards.length ? developmentCards.length + (developmentCards.length === 1 ? ' app' : ' apps') : '';
     }
 
+    function setCardLocation(card, app) {
+      const target = app.available ? availableRoot : developmentRoot;
+      target.append(card);
+    }
+
+    function updateKnownCard(app) {
+      const card = document.getElementById(app.id + '-card');
+      if (!card) return;
+      card.dataset.appName = app.name.toLowerCase();
+      const status = card.querySelector('.app-status');
+      const button = card.querySelector('[data-download]');
+      const note = card.querySelector('.tile-note');
+      const description = card.querySelector('.app-description');
+      const category = card.querySelector('.app-category');
+      const available = Boolean(app.available && Number.isFinite(app.size) && app.downloadUrl);
+      status.className = available ? 'app-status' : 'app-status developing';
+      status.textContent = available ? 'Available' : 'Under development';
+      button.hidden = !available;
+
+      if (available) {
+        button.href = app.downloadUrl;
+        button.textContent = 'Download ' + app.name + ' APK · ' + formatFileSize(app.size);
+        if (app.id === 'supermom') category.textContent = 'Android';
+        if (note) note.hidden = true;
+        description.textContent = app.id === 'supermom'
+          ? 'SuperMom is ready to download.'
+          : 'A private household ledger for two earners.';
+      } else {
+        if (app.id === 'supermom') category.textContent = 'Coming soon';
+        if (note) note.hidden = false;
+        if (app.id === 'supermom') {
+          description.textContent = 'SuperMom is being built now. Its download will appear here when it’s ready.';
+        }
+      }
+      setCardLocation(card, { available });
+    }
+
     function createGenericCard(app) {
       const card = document.createElement('article');
       card.className = 'app-tile';
-      card.id = 'card-' + app.id;
+      card.id = app.id + '-card';
       card.dataset.appId = app.id;
       card.dataset.appName = app.name.toLowerCase();
 
+      const mainLink = document.createElement('a');
+      mainLink.className = 'tile-main';
+      mainLink.href = '#app/' + encodeURIComponent(app.id);
       const top = document.createElement('div');
       top.className = 'tile-top';
       const icon = document.createElement('div');
       icon.className = 'app-icon';
-      icon.setAttribute('aria-label', app.name + ' logo');
+      icon.setAttribute('aria-hidden', 'true');
       const fallback = document.createElement('span');
       fallback.className = 'icon-fallback';
       fallback.textContent = Array.from(app.name.trim())[0]?.toUpperCase() || 'A';
@@ -316,7 +343,8 @@
       description.textContent = app.available
         ? app.name + ' is ready to download.'
         : app.name + ' is being built now. Its download will appear here when it’s ready.';
-      card.append(top, title, category, description);
+      mainLink.append(top, title, category, description);
+      card.append(mainLink);
 
       if (app.available && Number.isFinite(app.size) && app.downloadUrl) {
         const button = document.createElement('a');
@@ -331,48 +359,103 @@
         card.append(note);
       }
 
-      const target = app.available ? downloadRoot : developmentRoot;
-      target.append(card);
+      setCardLocation(card, app);
     }
 
-    function updateKnownCard(app) {
-      const card = document.getElementById(app.id + '-card');
-      if (!card) return;
-      card.dataset.appName = app.name.toLowerCase();
-      const status = card.querySelector('.app-status');
-      const button = card.querySelector('[data-download]');
-      const note = card.querySelector('.tile-note');
-      const description = card.querySelector('.app-description');
-      const category = card.querySelector('.app-category');
-      const available = Boolean(app.available && Number.isFinite(app.size) && app.downloadUrl);
-      status.className = available ? 'app-status' : 'app-status developing';
-      status.textContent = available ? 'Available' : 'Under development';
-      button.hidden = !available;
-      if (available) {
-        button.href = app.downloadUrl;
-        button.textContent = 'Download ' + app.name + ' APK · ' + formatFileSize(app.size);
-        if (app.id === 'supermom') category.textContent = 'Android';
-        if (note) note.hidden = true;
-        description.textContent = app.id === 'supermom'
-          ? 'SuperMom is ready to download.'
-          : 'A private household ledger for two earners.';
-        downloadRoot.append(card);
+    function updateAppCard(app) {
+      appData.set(app.id, app);
+      if (app.id === 'finbud' || app.id === 'supermom') {
+        updateKnownCard(app);
+      } else if (document.getElementById(app.id + '-card')) {
+        const existingCard = document.getElementById(app.id + '-card');
+        existingCard.remove();
+        createGenericCard(app);
       } else {
-        if (app.id === 'supermom') category.textContent = 'Coming soon';
-        if (note) note.hidden = false;
-        if (app.id === 'supermom') {
-          description.textContent = 'SuperMom is being built now. Its download will appear here when it’s ready.';
-        }
-        developmentRoot.append(card);
+        createGenericCard(app);
       }
+    }
+
+    function updateDetailIcon(app) {
+      const icon = document.getElementById('detail-icon');
+      icon.replaceChildren();
+      icon.className = 'detail-icon';
+
+      if (app.id === 'finbud') {
+        icon.classList.add('finbud-icon');
+        icon.textContent = 'F';
+        return;
+      }
+      if (app.id === 'supermom') {
+        icon.classList.add('supermom-icon');
+        const original = document.querySelector('#supermom-card .supermom-icon svg');
+        if (original) icon.append(original.cloneNode(true));
+        return;
+      }
+
+      const fallback = document.createElement('span');
+      fallback.className = 'icon-fallback';
+      fallback.textContent = Array.from(app.name.trim())[0]?.toUpperCase() || 'A';
+      icon.append(fallback);
+      if (app.iconUrl) {
+        const image = document.createElement('img');
+        image.src = app.iconUrl;
+        image.alt = app.name + ' logo';
+        image.onload = () => { fallback.hidden = true; };
+        image.onerror = () => { image.remove(); };
+        icon.append(image);
+      }
+    }
+
+    function showAppDetails(app) {
+      if (!app) return;
+      document.getElementById('library-view').hidden = true;
+      document.getElementById('details-view').hidden = false;
+      document.title = app.name + ' — App Library';
+
+      document.getElementById('detail-name').textContent = app.name;
+      const category = app.id === 'finbud' ? 'Finance' : (app.available ? 'Android' : 'Coming soon');
+      document.getElementById('detail-category').textContent = category;
+      const available = Boolean(app.available && Number.isFinite(app.size) && app.downloadUrl);
+      const status = document.getElementById('detail-status');
+      status.className = available ? 'detail-status' : 'detail-status developing';
+      status.textContent = available ? 'Available to download' : 'Under development';
+
+      const download = document.getElementById('detail-download');
+      download.hidden = !available;
+      if (available) {
+        download.href = app.downloadUrl;
+        download.textContent = 'Download ' + app.name + ' APK · ' + formatFileSize(app.size);
+      }
+      document.getElementById('detail-note').hidden = available;
+      document.getElementById('detail-description').textContent = app.id === 'finbud'
+        ? 'A private household ledger for two earners.'
+        : (available
+          ? app.name + ' is ready to download.'
+          : app.name + ' is being built now. Its download will appear here when it’s ready.');
+      document.getElementById('detail-availability').textContent = available ? 'Available to download' : 'Under development';
+      document.getElementById('detail-size-row').hidden = !available;
+      document.getElementById('detail-requirements-row').hidden = app.id !== 'finbud';
+      if (available) document.getElementById('detail-size').textContent = formatFileSize(app.size);
+      updateDetailIcon(app);
+    }
+
+    function showCurrentView() {
+      const match = location.hash.match(/^#app\/(.+)$/);
+      if (match) {
+        const appId = decodeURIComponent(match[1]);
+        const app = appData.get(appId);
+        if (app) showAppDetails(app);
+        return;
+      }
+      document.getElementById('details-view').hidden = true;
+      document.getElementById('library-view').hidden = false;
+      document.title = 'App Library';
     }
 
     function renderApps(apps) {
-      for (const app of apps) {
-        if (app.id === 'finbud' || app.id === 'supermom') updateKnownCard(app);
-        else if (!document.getElementById('card-' + app.id)) createGenericCard(app);
-      }
+      for (const app of apps) updateAppCard(app);
       updateShelfVisibility();
+      showCurrentView();
     }
 
     document.getElementById('app-search').addEventListener('input', (event) => {
@@ -382,16 +465,18 @@
       });
       updateShelfVisibility();
     });
+    window.addEventListener('hashchange', showCurrentView);
 
     fetch('https://finbud-apk-admin-sriramfit123.onrender.com/api/apps', { cache: 'no-store' })
       .then((response) => response.ok ? response.json() : null)
       .then((result) => {
         if (Array.isArray(result?.apps)) renderApps(result.apps);
-        else updateShelfVisibility();
+        else { updateShelfVisibility(); showCurrentView(); }
       })
-      .catch(() => updateShelfVisibility());
+      .catch(() => { updateShelfVisibility(); showCurrentView(); });
 
     updateShelfVisibility();
+    showCurrentView();
   </script>
 </body>
 </html>
