@@ -126,7 +126,7 @@ function receiveApk(req) {
     try {
       parser = Busboy({
         headers: req.headers,
-        limits: { fileSize: MAX_UPLOAD_BYTES, files: 2, fields: 1, parts: 2 },
+        limits: { fileSize: MAX_UPLOAD_BYTES, files: 2, fields: 1, parts: 3 },
       });
     } catch {
       reject(Object.assign(new Error('Choose one APK file to upload.'), { statusCode: 400 }));
